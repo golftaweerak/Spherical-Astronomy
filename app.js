@@ -54,45 +54,69 @@ stage.appendChild(renderer.domElement);
 const allLabels = [];
 let labelsVisible = true;
 
-// ตัวช่วยสร้างป้ายข้อความ (Sprite)
-function makeLabel(text, color = '#e9ecf5', bg = 'rgba(12,16,32,0.82)', scale = 7.0) {
+function getLabelScaleMultiplier() {
+  const w = (typeof stage !== 'undefined' && stage && stage.clientWidth) ? stage.clientWidth : window.innerWidth;
+  if (w <= 480) return 1.45;
+  if (w <= 768) return 1.28;
+  if (w <= 1024) return 1.12;
+  return 1.0;
+}
+
+// ตัวช่วยสร้างป้ายข้อความ (Sprite) ความละเอียดสูง คมชัด สบายตาบนมือถือและจอทุกขนาด
+function makeLabel(text, color = '#e9ecf5', bg = 'rgba(8,12,28,0.92)', scale = 7.0) {
   const c = document.createElement('canvas');
   const ctx = c.getContext('2d');
-  const fs = 44;
+  const fs = 56;
   ctx.font = `600 ${fs}px "IBM Plex Sans Thai", sans-serif`;
-  const pad = 24;
+  const pad = 28;
   c.width = Math.max(32, Math.ceil(ctx.measureText(text).width + pad * 2));
   c.height = fs + pad;
 
   const ctx2 = c.getContext('2d');
   ctx2.font = `600 ${fs}px "IBM Plex Sans Thai", sans-serif`;
-  const r = 14;
+  const r = 16;
   ctx2.fillStyle = bg;
   ctx2.beginPath();
   if (ctx2.roundRect) ctx2.roundRect(0, 0, c.width, c.height, r);
   else ctx2.rect(0, 0, c.width, c.height);
   ctx2.fill();
+
+  // ขอบป้ายคมชัด ป้องกันการกลืนกับเส้นกริด/ดาวบนหน้าจอเล็ก
+  ctx2.lineWidth = 3;
+  ctx2.strokeStyle = 'rgba(255, 255, 255, 0.24)';
+  ctx2.stroke();
+
   ctx2.fillStyle = color;
   ctx2.textBaseline = 'middle';
+  ctx2.shadowColor = 'rgba(0, 0, 0, 0.9)';
+  ctx2.shadowBlur = 4;
   ctx2.fillText(text, pad, c.height / 2 + 2);
+  ctx2.shadowBlur = 0;
 
   const tex = new THREE.CanvasTexture(c);
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.generateMipmaps = false;
   tex.anisotropy = 4;
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
-  sprite.scale.set((c.width / c.height) * scale, scale, 1);
+  
+  const mult = getLabelScaleMultiplier();
+  const aspect = c.width / c.height;
+  sprite.scale.set(aspect * scale * mult, scale * mult, 1);
+  sprite.userData = { baseScale: scale, aspect, fs, pad, r };
   sprite.visible = labelsVisible;
   allLabels.push(sprite);
   return sprite;
 }
 
 // ตัวช่วยอัปเดตข้อความใน Sprite เดิมโดยไม่สูญเสียประสิทธิภาพ
-function updateLabel(sprite, text, color = '#e9ecf5', bg = 'rgba(12,16,32,0.82)', scale = 7.0) {
+function updateLabel(sprite, text, color = '#e9ecf5', bg = 'rgba(8,12,28,0.92)', scale = 7.0) {
   if (!sprite || !sprite.material || !sprite.material.map) return;
   const c = sprite.material.map.image;
   const ctx = c.getContext('2d');
-  const fs = 44;
+  const fs = (sprite.userData && sprite.userData.fs) || 56;
   ctx.font = `600 ${fs}px "IBM Plex Sans Thai", sans-serif`;
-  const pad = 24;
+  const pad = (sprite.userData && sprite.userData.pad) || 28;
   const w = Math.max(32, Math.ceil(ctx.measureText(text).width + pad * 2));
   const h = fs + pad;
   if (c.width !== w || c.height !== h) {
@@ -101,18 +125,32 @@ function updateLabel(sprite, text, color = '#e9ecf5', bg = 'rgba(12,16,32,0.82)'
   }
   ctx.clearRect(0, 0, w, h);
   ctx.font = `600 ${fs}px "IBM Plex Sans Thai", sans-serif`;
-  const r = 14;
+  const r = (sprite.userData && sprite.userData.r) || 16;
   ctx.fillStyle = bg;
   ctx.beginPath();
   if (ctx.roundRect) ctx.roundRect(0, 0, w, h, r);
   else ctx.rect(0, 0, w, h);
   ctx.fill();
+
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.24)';
+  ctx.stroke();
+
   ctx.fillStyle = color;
   ctx.textBaseline = 'middle';
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+  ctx.shadowBlur = 4;
   ctx.fillText(text, pad, h / 2 + 2);
+  ctx.shadowBlur = 0;
 
   sprite.material.map.needsUpdate = true;
-  sprite.scale.set((w / h) * scale, scale, 1);
+  const mult = getLabelScaleMultiplier();
+  const aspect = w / h;
+  if (sprite.userData) {
+    sprite.userData.baseScale = scale;
+    sprite.userData.aspect = aspect;
+  }
+  sprite.scale.set(aspect * scale * mult, scale * mult, 1);
 }
 
 function addLine(points, color, opacity = 1, dashed = false) {
@@ -552,6 +590,14 @@ function fitCameraToViewport() {
   camState.minRadius = R * 1.50 / Math.tan(minFov / 2);
   if (camState.radius < camState.minRadius) camState.radius = camState.minRadius;
   applyCamera();
+
+  // อัปเดตขนาดตัวอักษรป้ายกำกับ 3D ให้เหมาะสมกับขนาดหน้าจอ คมชัดอ่านง่ายเสมอ
+  const mult = getLabelScaleMultiplier();
+  for (const s of allLabels) {
+    if (s && s.userData && s.userData.baseScale) {
+      s.scale.set(s.userData.aspect * s.userData.baseScale * mult, s.userData.baseScale * mult, 1);
+    }
+  }
 }
 const ro = new ResizeObserver(() => {
   const w = stage.clientWidth, h = stage.clientHeight;

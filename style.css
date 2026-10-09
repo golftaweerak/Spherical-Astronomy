@@ -361,13 +361,33 @@ body.drawer-open .side-drawer,
   align-items: center;
   gap: 8px;
   margin-bottom: 16px;
-  padding: 6px;
+  padding: 6px 8px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   backdrop-filter: blur(12px);
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(150, 165, 210, 0.28) transparent;
 }
+.module-nav::-webkit-scrollbar {
+  height: 4px;
+}
+.module-nav::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.14);
+  border-radius: 999px;
+  margin: 0 8px;
+}
+.module-nav::-webkit-scrollbar-thumb {
+  background: rgba(150, 165, 210, 0.35);
+  border-radius: 999px;
+  transition: background .18s;
+}
+.module-nav::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent);
+}
+
 .nav-tab {
   display: inline-flex;
   align-items: center;
@@ -380,6 +400,7 @@ body.drawer-open .side-drawer,
   text-decoration: none;
   white-space: nowrap;
   transition: all .18s ease;
+  flex: 0 0 auto;
 }
 .nav-tab:hover {
   color: var(--color-text);
@@ -415,7 +436,7 @@ body.drawer-open .side-drawer,
   }
 }
 
-/* ============ ฝั่งขวา: ทรงกลมท้องฟ้า (พื้นที่ขยายเต็มจอ) ============ */
+/* ============ ฝั่งขวา: ทรงกลมท้องฟ้า (พื้นที่แบบจำลอง 3 มิติ) ============ */
 .sky-card {
   grid-area: sky;
   position: sticky;
@@ -427,30 +448,43 @@ body.drawer-open .side-drawer,
   overflow: hidden;
   height: calc(100vh - 110px);
   min-height: 620px;
+  display: flex;
+  flex-direction: column;
 }
 .sky-card canvas, .stage canvas, .stage { display: block; width: 100%; height: 100%; touch-action: none; }
-.sky-card .stage { position: absolute; inset: 0; }
+.sky-card .stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+}
 @media (max-width: 960px) {
   .sky-card {
     position: relative;
     top: 0;
-    min-height: 480px;
-    height: 64vh;
+    min-height: unset;
+    height: auto;
+  }
+  .sky-card .stage {
+    height: 56vh;
+    min-height: 380px;
+    max-height: 520px;
   }
 }
 
-/* แถบเครื่องมือควบคุมการแสดงผลบนจอ 3D (ย้ายมาด้านล่างเพื่อไม่ให้บังจุดจอมฟ้าและข้อความด้านบน) */
+/* แถบเครื่องมือควบคุมการแสดงผลบนจอ 3D — วางด้านล่างเวที 3D โดยไม่บังโมเดล */
 .stage-toolbar {
-  position: absolute;
-  bottom: 48px;
-  left: 10px;
-  right: 10px;
+  position: relative;
+  z-index: 10;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
+  align-items: center;
   gap: 6px;
-  z-index: 10;
-  pointer-events: none;
+  padding: 8px 12px;
+  background: rgba(12, 17, 36, 0.88);
+  border-top: 1px solid var(--color-border);
+  backdrop-filter: blur(10px);
 }
 .tool-btn {
   display: inline-flex;
@@ -494,6 +528,10 @@ body.drawer-open .side-drawer,
   border-color: #fbbf24;
   color: #fbbf24;
 }
+[data-theme='light'] .stage-toolbar {
+  background: rgba(240, 244, 252, 0.92);
+  border-top-color: var(--color-border);
+}
 [data-theme='light'] .tool-btn {
   background: rgba(255, 255, 255, 0.88);
   color: #4a5578;
@@ -504,35 +542,97 @@ body.drawer-open .side-drawer,
 }
 
 .legend {
-  position: absolute;
-  left: 10px;
-  right: 10px;
-  bottom: 8px;
+  position: relative;
+  z-index: 9;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 4px 12px;
-  padding: 5px 12px;
-  border-radius: 8px;
-  background: rgba(10, 14, 30, 0.65);
+  align-items: center;
+  gap: 4px 14px;
+  padding: 6px 12px 10px;
+  background: rgba(8, 12, 26, 0.78);
+  border-top: 1px solid rgba(150, 165, 210, 0.08);
   backdrop-filter: blur(6px);
   font-size: 11px;
   color: #cfd6ea;
-  pointer-events: none;
 }
-.legend .item { display: inline-flex; align-items: center; gap: 6px; }
-.legend .dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
+.legend .item, .legend .legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.legend .dot, .legend .legend-dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
+[data-theme='light'] .legend {
+  background: rgba(230, 236, 248, 0.85);
+  border-top-color: rgba(60, 75, 120, 0.12);
+  color: #3b4566;
+}
+
 .hint {
   position: absolute;
   right: 12px;
   top: 12px;
-  font-size: 11.5px;
+  font-size: 11px;
   color: var(--color-text-muted);
-  background: rgba(10, 14, 30, 0.52);
+  background: rgba(10, 14, 30, 0.65);
   backdrop-filter: blur(6px);
   padding: 4px 12px;
   border-radius: 999px;
   pointer-events: none;
+  z-index: 5;
+}
+[data-theme='light'] .hint {
+  background: rgba(255, 255, 255, 0.8);
+  color: #4a5578;
+}
+
+@media (max-width: 960px) {
+  .stage-toolbar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    justify-content: flex-start;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 8px 10px;
+    gap: 8px;
+  }
+  .stage-toolbar::-webkit-scrollbar { display: none; }
+  .tool-btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding: 6px 11px;
+    font-size: 11.5px;
+  }
+  .legend {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    justify-content: flex-start;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 6px 10px 8px;
+    gap: 14px;
+    font-size: 10.5px;
+  }
+  .legend::-webkit-scrollbar { display: none; }
+  .legend .item, .legend .legend-item {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+  .hint {
+    font-size: 10px;
+    padding: 3px 9px;
+    top: 8px;
+    right: 8px;
+  }
+  /* รีเซ็ตกรณีที่แถบเครื่องมือฝังอยู่ใน stage โดยตรงเพื่อไม่ให้ทับโมเดล */
+  .stage > .stage-toolbar {
+    position: relative !important;
+    bottom: auto !important;
+    left: auto !important;
+    right: auto !important;
+  }
+  .stage > .legend {
+    position: relative !important;
+    bottom: auto !important;
+    left: auto !important;
+    right: auto !important;
+  }
 }
 
 /* ============ Coordinate Mode Toggle & Target Chips ============ */

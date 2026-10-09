@@ -39,12 +39,20 @@ applyCamera();
 const allLabels = [];
 let labelsVisible = true;
 
-function makeLabel(text, color = '#e9ecf5', bg = 'rgba(12,16,32,0.85)', scale = 6.8) {
+function getLabelScaleMultiplier() {
+  const w = (typeof stage !== 'undefined' && stage && stage.clientWidth) ? stage.clientWidth : window.innerWidth;
+  if (w <= 480) return 1.45;
+  if (w <= 768) return 1.28;
+  if (w <= 1024) return 1.12;
+  return 1.0;
+}
+
+function makeLabel(text, color = '#e9ecf5', bg = 'rgba(8,12,28,0.92)', scale = 6.8) {
   const c = document.createElement('canvas');
   const ctx = c.getContext('2d');
-  const fs = 42;
+  const fs = 54;
   ctx.font = `600 ${fs}px "IBM Plex Sans Thai", sans-serif`;
-  const pad = 20;
+  const pad = 26;
   c.width = Math.max(32, Math.ceil(ctx.measureText(text).width + pad * 2));
   c.height = fs + pad;
 
@@ -52,19 +60,32 @@ function makeLabel(text, color = '#e9ecf5', bg = 'rgba(12,16,32,0.85)', scale = 
   ctx2.font = `600 ${fs}px "IBM Plex Sans Thai", sans-serif`;
   ctx2.fillStyle = bg;
   ctx2.beginPath();
-  if (ctx2.roundRect) ctx2.roundRect(0, 0, c.width, c.height, 12);
+  if (ctx2.roundRect) ctx2.roundRect(0, 0, c.width, c.height, 16);
   else ctx2.rect(0, 0, c.width, c.height);
   ctx2.fill();
+
+  ctx2.lineWidth = 3;
+  ctx2.strokeStyle = 'rgba(255, 255, 255, 0.24)';
+  ctx2.stroke();
+
   ctx2.fillStyle = color;
   ctx2.textBaseline = 'middle';
-  ctx2.fillText(text, pad, c.height / 2);
+  ctx2.shadowColor = 'rgba(0, 0, 0, 0.9)';
+  ctx2.shadowBlur = 4;
+  ctx2.fillText(text, pad, c.height / 2 + 1);
+  ctx2.shadowBlur = 0;
 
   const texture = new THREE.CanvasTexture(c);
   texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
   const mat = new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true });
   const sprite = new THREE.Sprite(mat);
-  sprite.scale.set(scale * (c.width / c.height), scale, 1);
-  sprite.userData = { canvas: c, scale, baseColor: color, baseBg: bg };
+  
+  const mult = getLabelScaleMultiplier();
+  const aspect = c.width / c.height;
+  sprite.scale.set(aspect * scale * mult, scale * mult, 1);
+  sprite.userData = { canvas: c, scale, aspect, baseColor: color, baseBg: bg, fs, pad };
   allLabels.push(sprite);
   return sprite;
 }
@@ -72,8 +93,8 @@ function makeLabel(text, color = '#e9ecf5', bg = 'rgba(12,16,32,0.85)', scale = 
 function updateLabel(sprite, text, color, bg) {
   const d = sprite.userData;
   const c = d.canvas;
-  const fs = 42;
-  const pad = 20;
+  const fs = d.fs || 54;
+  const pad = d.pad || 26;
   const ctx = c.getContext('2d');
   ctx.font = `600 ${fs}px "IBM Plex Sans Thai", sans-serif`;
   c.width = Math.max(32, Math.ceil(ctx.measureText(text).width + pad * 2));
@@ -83,17 +104,30 @@ function updateLabel(sprite, text, color, bg) {
   ctx2.font = `600 ${fs}px "IBM Plex Sans Thai", sans-serif`;
   ctx2.fillStyle = bg || d.baseBg;
   ctx2.beginPath();
-  if (ctx2.roundRect) ctx2.roundRect(0, 0, c.width, c.height, 12);
+  if (ctx2.roundRect) ctx2.roundRect(0, 0, c.width, c.height, 16);
   else ctx2.rect(0, 0, c.width, c.height);
   ctx2.fill();
+
+  ctx2.lineWidth = 3;
+  ctx2.strokeStyle = 'rgba(255, 255, 255, 0.24)';
+  ctx2.stroke();
+
   ctx2.fillStyle = color || d.baseColor;
   ctx2.textBaseline = 'middle';
-  ctx2.fillText(text, pad, c.height / 2);
+  ctx2.shadowColor = 'rgba(0, 0, 0, 0.9)';
+  ctx2.shadowBlur = 4;
+  ctx2.fillText(text, pad, c.height / 2 + 1);
+  ctx2.shadowBlur = 0;
 
   sprite.material.map.dispose();
-  sprite.material.map = new THREE.CanvasTexture(c);
-  sprite.material.map.minFilter = THREE.LinearFilter;
-  sprite.scale.set(d.scale * (c.width / c.height), d.scale, 1);
+  const tex = new THREE.CanvasTexture(c);
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.generateMipmaps = false;
+  sprite.material.map = tex;
+  const mult = getLabelScaleMultiplier();
+  d.aspect = c.width / c.height;
+  sprite.scale.set(d.aspect * d.scale * mult, d.scale * mult, 1);
 }
 
 // -------------------------------------------------------------
@@ -612,6 +646,13 @@ function fitCameraToViewport() {
   camState.minRadius = R * 1.50 / Math.tan(minFov / 2);
   if (camState.radius < camState.minRadius) camState.radius = camState.minRadius;
   applyCamera();
+
+  const mult = getLabelScaleMultiplier();
+  for (const s of allLabels) {
+    if (s && s.userData && s.userData.scale) {
+      s.scale.set(s.userData.aspect * s.userData.scale * mult, s.userData.scale * mult, 1);
+    }
+  }
 }
 const ro = new ResizeObserver(() => {
   const w = stage.clientWidth, h = stage.clientHeight;
