@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ทรงกลมท้องฟ้า — แปลงพิกัดศูนย์สูตรฟ้า (RA/Dec) เป็นพิกัดขอบฟ้า (Alt/Az)</title>
+
+<!-- ฟอนต์ไทย IBM Plex Sans Thai -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Three.js จาก CDN (ต้องต่ออินเทอร์เน็ต) ปักหมายเลขเวอร์ชันเพื่อความเสถียร -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+  }
+}
+</script>
+
+<style>
+/* ============ Design tokens ============ */
+:root,
+[data-theme='dark'] {
+  --color-bg: #0b1020;
+  --color-bg-grad: radial-gradient(1200px 800px at 70% -10%, #1a2246 0%, #0b1020 55%);
+  --color-surface: rgba(20, 27, 52, 0.72);
+  --color-surface-solid: #141b34;
+  --color-border: rgba(150, 165, 210, 0.22);
+  --color-text: #e9ecf5;
+  --color-text-muted: #9aa3c0;
+  --color-accent: #f2c14e;        /* สีทอง — ดาว/เป้าหมาย */
+  --color-accent-soft: rgba(242, 193, 78, 0.16);
+  --color-blue: #6ea8e8;          /* เส้นศูนย์สูตรฟ้า */
+  --color-danger: #e86a6a;        /* เป้าหมายใต้ขอบฟ้า */
+  --color-grid: rgba(160, 175, 215, 0.16); /* กริด RA/Dec */
+  --radius-md: 12px;
+  --font-body: 'IBM Plex Sans Thai', 'Noto Sans Thai', sans-serif;
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 20px;
+  --text-xl: 26px;
+}
+[data-theme='light'] {
+  --color-bg: #eef1f8;
+  --color-bg-grad: radial-gradient(1200px 800px at 70% -10%, #ffffff 0%, #e4e9f5 60%);
+  --color-surface: rgba(255, 255, 255, 0.8);
+  --color-surface-solid: #ffffff;
+  --color-border: rgba(60, 75, 120, 0.18);
+  --color-text: #23283d;
+  --color-text-muted: #5a6480;
+  --color-accent: #b07f16;
+  --color-accent-soft: rgba(176, 127, 22, 0.12);
+  --color-blue: #2d6cb5;
+  --color-danger: #c04747;
+  --color-grid: rgba(60, 75, 120, 0.14);
+}
+
+/* ============ Base ============ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: none; text-size-adjust: none; }
+body {
+  min-height: 100dvh;
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--color-text);
+  background: var(--color-bg-grad);
+  background-attachment: fixed;
+  line-height: 1.55;
+}
+input, button, select { font: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: none; }
+:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: 4px; }
+
+/* ============ Layout ============ */
+.app { max-width: 1400px; margin: 0 auto; padding: 16px; }
+
+header.app-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 4px 16px;
+}
+.logo { flex: 0 0 auto; }
+.title-block h1 { font-size: var(--text-xl); font-weight: 700; line-height: 1.2; }
+.title-block p { font-size: var(--text-sm); color: var(--color-text-muted); }
+.theme-toggle {
+  margin-left: auto;
+  width: 40px; height: 40px; border-radius: 50%;
+  display: grid; place-items: center;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  transition: color .18s, border-color .18s;
+}
+.theme-toggle:hover { color: var(--color-accent); border-color: var(--color-accent); }
+
+.layout {
+  display: grid;
+  grid-template-columns: 400px 1fr;
+  grid-template-areas: "panel sky";
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 920px) {
+  .layout {
+    grid-template-columns: 1fr;
+    grid-template-areas: "sky" "panel";
+  }
+}
+
+/* ============ ป้าดขวา: ทรงกลมท้องฟ้า ============ */
+.sky-card {
+  grid-area: sky;
+  position: relative;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+  min-height: 480px;
+}
+.sky-card canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.sky-card .stage { position: absolute; inset: 0; }
+@media (max-width: 920px) { .sky-card { min-height: 0; height: 58vh; } }
+
+.legend {
+  position: absolute; left: 12px; bottom: 12px;
+  display: flex; flex-wrap: wrap; gap: 4px 14px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(10, 14, 30, 0.55);
+  backdrop-filter: blur(6px);
+  font-size: var(--text-xs);
+  color: #cfd6ea;
+  pointer-events: none;
+}
+.legend .item { display: inline-flex; align-items: center; gap: 6px; }
+.legend .dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+.hint {
+  position: absolute; right: 12px; top: 12px;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  background: rgba(10, 14, 30, 0.45);
+  backdrop-filter: blur(6px);
+  padding: 4px 10px; border-radius: 999px;
+  pointer-events: none;
+}
+
+/* ============ ป้าดซ้าย: ควบคุมและผลลัพธ์ ============ */
+.panel { grid-area: panel; display: flex; flex-direction: column; gap: 16px; }
+.card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  backdrop-filter: blur(8px);
+  padding: 18px;
+}
+.card h2 {
+  font-size: var(--text-lg); font-weight: 700;
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 14px;
+}
+.card h2 .num {
+  width: 26px; height: 26px; border-radius: 8px;
+  display: grid; place-items: center;
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: var(--text-sm); font-weight: 700;
+  flex: 0 0 auto;
+}
+.field { margin-bottom: 12px; }
+.field:last-child { margin-bottom: 0; }
+.field label {
+  display: block; font-size: var(--text-sm); font-weight: 600;
+  color: var(--color-text-muted); margin-bottom: 6px;
+}
+.field .hint-text { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 4px; }
+input[type='number'], input[type='datetime-local'], select {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-solid);
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--color-text-muted) 50%), linear-gradient(135deg, var(--color-text-muted) 50%, transparent 50%); background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%; background-size: 5px 5px; background-repeat: no-repeat; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.chip {
+  padding: 5px 12px; border-radius: 999px;
+  font-size: var(--text-xs); font-weight: 600;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  transition: all .18s;
+}
+.chip:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.chip.active { background: var(--color-accent-soft); border-color: var(--color-accent); color: var(--color-accent); }
+
+.check-row { display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); }
+.check-row input { width: 16px; height: 16px; accent-color: var(--color-accent); }
+
+/* ผลลัพธ์ */
+.result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.result-box {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: rgba(127, 150, 200, 0.06);
+}
+.result-box .label { font-size: var(--text-xs); color: var(--color-text-muted); font-weight: 600; }
+.result-box .value {
+  font-size: var(--text-lg); font-weight: 700;
+  font-variant-numeric: tabular-nums lining-nums;
+  color: var(--color-accent);
+}
+.result-box .sub { font-size: var(--text-xs); color: var(--color-text-muted); }
+.status-line {
+  margin-top: 12px; padding: 9px 14px; border-radius: 8px;
+  font-size: var(--text-sm); font-weight: 600;
+  background: var(--color-accent-soft); color: var(--color-accent);
+  border: 1px solid color-mix(in oklab, var(--color-accent) 40%, transparent);
+}
+.status-line.below { background: color-mix(in oklab, var(--color-danger) 12%, transparent); color: var(--color-danger); border-color: color-mix(in oklab, var(--color-danger) 40%, transparent); }
+
+.note { font-size: var(--text-xs); color: var(--color-text-muted); line-height: 1.6; }
+.math-note { font-size: var(--text-sm); color: var(--color-text-muted); line-height: 1.7; }
+.math-note code {
+  font-family: 'IBM Plex Mono', monospace;
+  background: rgba(127, 150, 200, 0.12);
+  padding: 1px 6px; border-radius: 4px;
+  color: var(--color-text);
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="app-header">
+    <svg class="logo" width="44" height="44" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+      <circle cx="22" cy="22" r="19" stroke="var(--color-accent)" stroke-width="2"/>
+      <ellipse cx="22" cy="22" rx="19" ry="7.5" stroke="var(--color-blue)" stroke-width="1.6" transform="rotate(-23 22 22)"/>
+      <circle cx="35.5" cy="13" r="3" fill="var(--color-accent)"/>
+      <circle cx="8" cy="27" r="2" fill="var(--color-blue)"/>
+    </svg>
+    <div class="title-block">
+      <h1>ทรงกลมท้องฟ้า</h1>
+      <p>แปลงพิกัดศูนย์สูตรฟ้า (RA/Dec) → พิกัดขอบฟ้า (Alt/Az)</p>
+    </div>
+    <button class="theme-toggle" data-theme-toggle aria-label="สลับโหมดสว่าง/มืด">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+  </header>
+
+  <div class="layout">
+
+    <!-- ============ ฝั่งซ้าย: แผงควบคุม ============ -->
+    <aside class="panel">
+
+      <section class="card">
+        <h2><span class="num">1</span>วัตถุท้องฟ้า (พิกัดศูนย์สูตรฟ้า)</h2>
+
+        <div class="field">
+          <label for="starPreset">เลือกดาวตัวอย่าง (หรือกำหนดเอง)</label>
+          <select id="starPreset">
+            <option value="-1">— กำหนดเอง —</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="raInput">ไรท์แอสเซนชัน RA (ชั่วโมง 0–24)</label>
+          <input type="number" id="raInput" min="0" max="24" step="0.0001" value="18.6156">
+          <div class="hint-text">เช่น Vega = 18.616 ชม. (18 ชม. 36 นาที 56 วินาที)</div>
+        </div>
+
+        <div class="field">
+          <label for="decInput">เดคลิเนชัน Dec (องศา −90 ถึง +90)</label>
+          <input type="number" id="decInput" min="-90" max="90" step="0.0001" value="38.7836">
+          <div class="hint-text">บวก = ฟ้าเหนือ, ลบ = ฟ้าใต้</div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">2</span>ตำแหน่งผู้สังเกตและเวลา</h2>
+
+        <div class="row">
+          <div class="field">
+            <label for="latInput">ละติจูด (องศา)</label>
+            <input type="number" id="latInput" min="-90" max="90" step="0.0001" value="13.7560">
+          </div>
+          <div class="field">
+            <label for="lonInput">ลองจิจูด (องศา บวก=ตะวันออก)</label>
+            <input type="number" id="lonInput" min="-180" max="180" step="0.0001" value="100.5018">
+          </div>
+        </div>
+        <div class="chip-row">
+          <button class="chip" data-loc="13.7560,100.5018">กรุงเทพฯ</button>
+          <button class="chip" data-loc="18.7904,98.9847">เชียงใหม่</button>
+          <button class="chip" data-loc="0.0000,0.0000">ศูนย์สูตร (0°)</button>
+          <button class="chip" data-loc="90.0000,0.0000">ขั้วโลกเหนือ (90°)</button>
+        </div>
+
+        <div class="field" style="margin-top:14px">
+          <label for="dtInput">วันที่และเวลา</label>
+          <input type="datetime-local" id="dtInput" step="1">
+        </div>
+
+        <div class="field">
+          <label for="tzSelect">ความหมายของเวลาที่กรอก</label>
+          <select id="tzSelect">
+            <option value="local">เวลาท้องถิ่นของอุปกรณ์นี้</option>
+            <option value="utc">UTC</option>
+            <option value="7">UTC+7 (เวลาประเทศไทย)</option>
+          </select>
+        </div>
+
+        <div class="check-row" style="margin-top:10px">
+          <input type="checkbox" id="liveCheck">
+          <label for="liveCheck">ใช้เวลาจริงตอนนี้ (อัปเดตทุกวินาที — จะเห็นทรงกลมฟ้าหมุน)</label>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">3</span>ผลการแปลงพิกัด</h2>
+        <div class="result-grid">
+          <div class="result-box">
+            <div class="label">เวลามุมไซดีเรียลท้องถิ่น (LST)</div>
+            <div class="value" id="lstOut">–</div>
+            <div class="sub" id="gmstOut">–</div>
+          </div>
+          <div class="result-box">
+            <div class="label">มุมชั่วโมง H = LST − RA</div>
+            <div class="value" id="haOut">–</div>
+            <div class="sub">ลบ = ยังไม่ถึงเมริเดียน</div>
+          </div>
+          <div class="result-box">
+            <div class="label">ความสูงเหนือขอบฟ้า (Altitude)</div>
+            <div class="value" id="altOut">–</div>
+            <div class="sub" id="altDmsOut">–</div>
+          </div>
+          <div class="result-box">
+            <div class="label">ทิศ (Azimuth)</div>
+            <div class="value" id="azOut">–</div>
+            <div class="sub" id="azDmsOut">–</div>
+          </div>
+        </div>
+        <div class="status-line" id="statusOut">–</div>
+        <div class="result-grid" style="margin-top:10px">
+          <div class="result-box">
+            <div class="label">ความสูงสุดเมื่อข้ามเมริเดียน</div>
+            <div class="value" id="maxAltOut">–</div>
+            <div class="sub">90° − |ละติจูด − Dec|</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>สูตรที่ใช้</h2>
+        <p class="math-note">
+          กำหนด มุมชั่วโมง <code>H = LST − RA</code>, ละติจูด <code>φ</code>, เดคลิเนชัน <code>δ</code> แล้ว
+          องค์ประกอบของทิศทางในกรอบ ตะวันออก–เหนือ–ขึ้น คือ
+          <br>
+          <code>E = −cos δ · sin H</code>
+          <code>N = sin δ · cos φ − cos δ · cos H · sin φ</code>
+          <code>U = sin δ · sin φ + cos δ · cos H · cos φ</code>
+          <br>
+          จากนั้น <code>Alt = atan2(U, √(E²+N²))</code> และ <code>Az = atan2(E, N)</code> (วัดจากทิศเหนือ ไปทางตะวันออก ตามเข็มนาฬิกา)
+          LST คำนวณจากสูตร GMST ของ USNO บวกลองจิจูดตะวันออก
+        </p>
+        <p class="note" style="margin-top:10px">
+          หมายเหตุ: โมเดลเชิงเรขาคณิตเพื่อการศึกษา — ใช้ UTC แทน UT1, ไม่รวมการหักเหของแสงในบรรยากาศ
+          และไม่รวม precession กับ proper motion (พิกัดดาวตัวอย่างเป็นค่าประมาณยุค J2000)
+          จึงเหมาะสำหรับการเรียนการสอนมากกว่างานสังเกตที่ต้องการความแม่นยำสูง
+          สูตรเวลาไซดีเรียลอ้างอิง
+          <a href="https://aa.usno.navy.mil/faq/GAST" target="_blank" rel="noopener" style="color:var(--color-blue)">USNO — Computing Approximate Sidereal Time</a>
+        </p>
+      </section>
+
+    </aside>
+
+    <!-- ============ ฝั่งขวา: ทรงกลมท้องฟ้า 3D ============ -->
+    <section class="sky-card" aria-label="ทรงกลมท้องฟ้าสามมิติ">
+      <div class="stage" id="stage"></div>
+      <div class="hint">ลากเพื่อหมุน · ซูมด้วยสองนิ้วหรือล้อเมาส์</div>
+      <div class="legend">
+        <span class="item"><span class="dot" style="background:#f2c14e"></span>ดาวเป้าหมาย</span>
+        <span class="item"><span class="dot" style="background:#6ea8e8"></span>เส้นศูนย์สูตรฟ้า</span>
+        <span class="item"><span class="dot" style="background:#aab4cf"></span>กริด RA/Dec</span>
+        <span class="item"><span class="dot" style="background:#7dd6a8"></span>เส้นเมริเดียน</span>
+        <span class="item"><span class="dot" style="background:#e86a6a"></span>เป้าหมายใต้ขอบฟ้า</span>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+
+/* =====================================================================
+   ส่วนที่ 1 — คณิตศาสตร์ดาราศาสตร์ (แก้ไข/ตรวจสอบได้ง่าย)
+   ===================================================================== */
+
+const D2R = Math.PI / 180;
+
+/** แปลง JS Date (UTC) → Julian Date */
+function jdFromDate(date) {
+  return date.getTime() / 86400000 + 2440587.5;
+}
+
+/** GMST เป็นชั่วโมง (สูตรประมาณของ USNO คลาดเคลื่อน < 0.1 วินาที/ศตวรรษ) */
+function gmstHours(jd) {
+  const d = jd - 2451545.0;
+  let g = 18.697374558 + 24.06570982441908 * d;
+  g %= 24;
+  if (g < 0) g += 24;
+  return g;
+}
+
+/** LST (ชั่วโมง) = GMST + ลองจิจูดตะวันออก/15 */
+function lstHours(jd, lonDeg) {
+  let l = gmstHours(jd) + lonDeg / 15;
+  l %= 24;
+  if (l < 0) l += 24;
+  return l;
+}
+
+/**
+ * แปลงพิกัดศูนย์สูตรฟ้า → พิกัดขอบฟ้า
+ * @param raHours  RA เป็นชั่วโมง
+ * @param decDeg   Dec เป็นองศา
+ * @param latDeg   ละติจูดผู้สังเกต (องศา)
+ * @param lstH     LST เป็นชั่วโมง
+ * คืนค่า { altDeg, azDeg, E, N, U } โดย azDeg = null เมื่ออยู่จุดเหนือศีรษ้าพอดี
+ */
+function equatorialToHorizontal(raHours, decDeg, latDeg, lstH) {
+  const H = (lstH - raHours) * 15 * D2R;  // มุมชั่วโมง (เรเดียน)
+  const d = decDeg * D2R;
+  const phi = latDeg * D2R;
+
+  // องค์ประกอบทิศทางในกรอบ ตะวันออก(E)–เหนือ(N)–ขึ้น(U)
+  const E = -Math.cos(d) * Math.sin(H);
+  const N =  Math.sin(d) * Math.cos(phi) - Math.cos(d) * Math.cos(H) * Math.sin(phi);
+  const U =  Math.sin(d) * Math.sin(phi) + Math.cos(d) * Math.cos(H) * Math.cos(phi);
+
+  const altDeg = Math.atan2(U, Math.hypot(E, N)) / D2R;
+  const horiz = Math.hypot(E, N);
+  let azDeg = null;
+  if (horiz > 1e-10) azDeg = (Math.atan2(E, N) / D2R + 360) % 360;
+
+  return { altDeg, azDeg, E, N, U };
+}
+
+/* ---------- ตัวช่วยจัดรูปแบบตัวเลข ---------- */
+const pad2 = (n) => String(n).padStart(2, '0');
+
+function hoursToHMS(h) {
+  h = ((h % 24) + 24) % 24;
+  const m = (h - Math.floor(h)) * 60;
+  const s = (m - Math.floor(m)) * 60;
+  return `${Math.floor(h)}ชม. ${pad2(Math.floor(m))}นาที ${s.toFixed(1).padStart(4, '0')}วิ.`;
+}
+
+function degToDMS(deg) {
+  const sign = deg < 0 ? '−' : '';
+  const a = Math.abs(deg);
+  const m = (a - Math.floor(a)) * 60;
+  const s = (m - Math.floor(m)) * 60;
+  return `${sign}${Math.floor(a)}° ${pad2(Math.floor(m))}′ ${s.toFixed(1).padStart(4, '0')}″`;
+}
+
+function azToCompass(az) {
+  const dirs = ['เหนือ', 'ตะวันออกเฉียงเหนือ', 'ตะวันออก', 'ตะวันออกเฉียงใต้', 'ใต้', 'ตะวันตกเฉียงใต้', 'ตะวันตก', 'ตะวันตกเฉียงเหนือ'];
+  const idx = Math.round(az / 45) % 8;
+  return dirs[idx];
+}
+
+/* =====================================================================
+   ส่วนที่ 2 — ข้อมูลดาวฤกษ์สว่าง (RA ชั่วโมง, Dec องศา)
+   ===================================================================== */
+const STARS = [
+  { name: 'ซิริอัส (Sirius)',         ra: 6.7525,  dec: -16.7161 },
+  { name: 'แคโนปัส (Canopus)',        ra: 6.3992,  dec: -52.6957 },
+  { name: 'อาร์คทูรัส (Arcturus)',     ra: 14.2610, dec: 19.1822 },
+  { name: 'เวกา (Vega)',             ra: 18.6156, dec: 38.7836 },
+  { name: 'คาเปลลา (Capella)',        ra: 5.2782,  dec: 45.9980 },
+  { name: 'รีเจล (Rigel)',            ra: 5.2423,  dec: -8.2016 },
+  { name: 'โปรซิออน (Procyon)',       ra: 7.6551,  dec: 5.2250 },
+  { name: 'เบเทลจูส (Betelgeuse)',    ra: 5.9195,  dec: 7.4071 },
+  { name: 'อาเคอร์นาร์ (Achernar)',    ra: 1.6286,  dec: -57.2367 },
+  { name: 'อัลทาอิร์ (Altair)',       ra: 19.8464, dec: 8.8683 },
+  { name: 'อัลดีบารัน (Aldebaran)',   ra: 4.5987,  dec: 16.5093 },
+  { name: 'สปิกา (Spica)',           ra: 13.4199, dec: -11.1613 },
+  { name: 'อันทาร์ส (Antares)',       ra: 16.4901, dec: -26.4320 },
+  { name: 'ฟอมัลฮอต (Fomalhaut)',     ra: 22.9608, dec: -29.6222 },
+  { name: 'ดาวเหนือ (Polaris)',       ra: 2.5303,  dec: 89.2641 },
+  { name: 'อัลฟาเซนทอรี (α Cen)',     ra: 14.6600, dec: -60.8354 },
+  { name: 'เดนีบ (Deneb)',           ra: 20.6905, dec: 45.2803 },
+];
+
+/* =====================================================================
+   ส่วนที่ 3 — ฉาก Three.js
+   ระบบพิกัด: x = ตะวันออก(E), y = ขึ้น(Zenith), z = −เหนือ(N)
+   ===================================================================== */
+
+const R = 100; // รัศมีทรงกลมท้องฟ้า (หน่วยใดก็ได้)
+const stage = document.getElementById('stage');
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(50, 1, 1, 3000);
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+stage.appendChild(renderer.domElement);
+
+// ---- กลุ่ม "ขอบฟ้า" (กรอบ ENU ของผู้สังเกต — อยู่กับที่) ----
+const groundGroup = new THREE.Group();
+scene.add(groundGroup);
+
+function addLine(points, color, opacity = 1, dashed = false) {
+  const geo = new THREE.BufferGeometry().setFromPoints(points);
+  let mat, line;
+  if (dashed) {
+    mat = new THREE.LineDashedMaterial({ color, transparent: true, opacity, dashSize: 3, gapSize: 2.5 });
+    line = new THREE.Line(geo, mat);
+    line.computeLineDistances();
+  } else {
+    mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity });
+    line = new THREE.Line(geo, mat);
+  }
+  return line;
+}
+
+// ขอบฟ้า (วงกลมระดับ U=0)
+groundGroup.add(addLine(
+  Array.from({ length: 129 }, (_, i) => {
+    const a = (i / 128) * Math.PI * 2;
+    return new THREE.Vector3(R * Math.cos(a), 0, R * Math.sin(a));
+  }),
+  0xaab4cf, 0.9
+));
+
+// พื้น (ครึ่งทรงกลมใต้ขอบฟ้า โปร่งแสง — ทำให้เส้นกริดใต้ขอบฟ้าจางลง)
+const groundDome = new THREE.Mesh(
+  new THREE.SphereGeometry(R, 48, 24, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2),
+  new THREE.MeshBasicMaterial({ color: 0x0a0e1e, transparent: true, opacity: 0.82, side: THREE.DoubleSide })
+);
+groundGroup.add(groundDome);
+
+// เส้นเมริเดียนของผู้สังเกต (เหนือ→จุดเหนือศีรษ้า→ใต้) เส้นประ
+groundGroup.add(addLine(
+  Array.from({ length: 65 }, (_, i) => {
+    const t = (i / 64) * Math.PI;
+    return new THREE.Vector3(0, R * Math.sin(t), -R * Math.cos(t));
+  }),
+  0x7dd6a8, 0.85, true
+));
+
+// ตัวช่วยสร้างป้ายข้อความ (Sprite)
+function makeLabel(text, color = '#e9ecf5', bg = 'rgba(12,16,32,0.78)') {
+  const c = document.createElement('canvas');
+  const ctx = c.getContext('2d');
+  const fs = 46;
+  ctx.font = `600 ${fs}px "IBM Plex Sans Thai", sans-serif`;
+  const pad = 26;
+  c.width = Math.ceil(ctx.measureText(text).width + pad * 2);
+  c.height = fs + pad;
+  const ctx2 = c.getContext('2d');
+  ctx2.font = `600 ${fs}px "IBM Plex Sans Thai", sans-serif`;
+  const r = 16;
+  ctx2.fillStyle = bg;
+  ctx2.beginPath();
+  ctx2.roundRect(0, 0, c.width, c.height, r);
+  ctx2.fill();
+  ctx2.fillStyle = color;
+  ctx2.textBaseline = 'middle';
+  ctx2.fillText(text, pad, c.height / 2 + 2);
+  const tex = new THREE.CanvasTexture(c);
+  tex.anisotropy = 4;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+  const s = 7.5;
+  sprite.scale.set((c.width / c.height) * s, s, 1);
+  return sprite;
+}
+
+// ทิศหลักทั้งสี่
+const cardinals = [
+  { t: 'เหนือ N', p: [0, 1, -R * 1.12] },
+  { t: 'ใต้ S',    p: [0, 1, R * 1.12] },
+  { t: 'ตะวันออก E', p: [R * 1.12, 1, 0] },
+  { t: 'ตะวันตก W', p: [-R * 1.12, 1, 0] },
+];
+for (const c of cardinals) {
+  const s = makeLabel(c.t, '#cfd9f0');
+  s.position.set(...c.p);
+  groundGroup.add(s);
+}
+
+// จุดเหนือศีรษ้า (Zenith)
+{
+  const zen = new THREE.Mesh(
+    new THREE.SphereGeometry(1.8, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0xaab4cf })
+  );
+  zen.position.set(0, R, 0);
+  groundGroup.add(zen);
+  const lbl = makeLabel('จุดเหนือศีรษ้า (Zenith)', '#cfd9f0');
+  lbl.position.set(0, R * 1.03, R * 0.4); // ขยับไปทางใต้ กันทับป้ายอื่น
+  groundGroup.add(lbl);
+}
+
+// ---- กลุ่ม "ท้องฟ้า" (กรอบศูนย์สูตรฟ้า — หมุนตามเวลาไซดีเรียล) ----
+// ในกรอบนี้: x = ทิศ RA 0 (จุดวสันตวิษุวัต), y = RA 6h, z = ขั้วฟ้าเหนือ
+const skyGroup = new THREE.Group();
+scene.add(skyGroup);
+
+// เส้นวงกลมบนทรงกลม: จากฟังก์ชัน (RA, Dec)
+function skyPoint(raHours, decDeg, r = R) {
+  const a = raHours * 15 * D2R;
+  const d = decDeg * D2R;
+  return new THREE.Vector3(r * Math.cos(d) * Math.cos(a), r * Math.cos(d) * Math.sin(a), r * Math.sin(d));
+}
+
+// เส้นศูนย์สูตรฟ้า (Dec = 0)
+skyGroup.add(addLine(
+  Array.from({ length: 129 }, (_, i) => skyPoint(i / 128 * 24, 0)),
+  0x6ea8e8, 0.95
+));
+{
+  const lbl = makeLabel('เส้นศูนย์สูตรฟ้า', '#6ea8e8');
+  lbl.position.copy(skyPoint(9, 0, R * 1.06));
+  skyGroup.add(lbl);
+}
+
+// ขนานเดคลิเนชัน Dec = ±30°, ±60°
+for (const dec of [-60, -30, 30, 60]) {
+  skyGroup.add(addLine(
+    Array.from({ length: 129 }, (_, i) => skyPoint(i / 128 * 24, dec)),
+    0x8090b8, 0.35
+  ));
+}
+
+// เส้นลองจิจูดฟ้า (RA ทุก 2 ชม.) จากขั้วเหนือถึงขั้วใต้
+for (let ra = 0; ra < 24; ra += 2) {
+  skyGroup.add(addLine(
+    Array.from({ length: 65 }, (_, i) => skyPoint(ra, -90 + (i / 64) * 180)),
+    0x8090b8, 0.28
+  ));
+}
+
+// ขั้วฟ้าเหนือ (NCP) + ป้าย (ป้ายอยู่ในกรอบขอบฟ้า ไม่หมุนตามท้องฟ้า)
+const ncpLabel = makeLabel('ขั้วฟ้าเหนือ', '#6ea8e8');
+{
+  const ncp = new THREE.Mesh(
+    new THREE.SphereGeometry(1.8, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0x6ea8e8 })
+  );
+  ncp.position.set(0, 0, R);
+  skyGroup.add(ncp);
+  groundGroup.add(ncpLabel);
+}
+
+// จุดวสันตวิษุวัต (RA 0, Dec 0)
+{
+  const eqx = new THREE.Mesh(
+    new THREE.SphereGeometry(1.5, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0xb8a0e8 })
+  );
+  eqx.position.copy(skyPoint(0, 0));
+  skyGroup.add(eqx);
+  const lbl = makeLabel('จุดวสันตวิษุวัต (RA 0ชม.)', '#b8a0e8');
+  lbl.position.copy(skyPoint(0, 10, R * 1.0));
+  skyGroup.add(lbl);
+}
+
+// ดาวฤกษ์สว่าง (จุดเล็ก)
+const starPoints = (() => {
+  const tex = (() => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 32;
+    const ctx = c.getContext('2d');
+    const g = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+    g.addColorStop(0, 'rgba(255,255,255,1)');
+    g.addColorStop(0.4, 'rgba(255,255,255,0.6)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 32, 32);
+    return new THREE.CanvasTexture(c);
+  })();
+  const pos = new Float32Array(STARS.length * 3);
+  STARS.forEach((s, i) => {
+    const p = skyPoint(s.ra, s.dec, R * 0.995);
+    pos[i * 3] = p.x; pos[i * 3 + 1] = p.y; pos[i * 3 + 2] = p.z;
+  });
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const mat = new THREE.PointsMaterial({
+    map: tex, size: 5, transparent: true, opacity: 0.85,
+    sizeAttenuation: false, depthWrite: false,
+  });
+  const pts = new THREE.Points(geo, mat);
+  skyGroup.add(pts);
+  return pts;
+})();
+
+// ดาวเป้าหมาย (ตัวชี้ขนาดใหญ่ + ป้ายชื่อ)
+const targetMesh = new THREE.Mesh(
+  new THREE.SphereGeometry(2.6, 20, 20),
+  new THREE.MeshBasicMaterial({ color: 0xf2c14e })
+);
+const targetGlow = new THREE.Mesh(
+  new THREE.SphereGeometry(5.5, 20, 20),
+  new THREE.MeshBasicMaterial({ color: 0xf2c14e, transparent: true, opacity: 0.22 })
+);
+const targetLabel = makeLabel('เป้าหมาย', '#f2c14e');
+skyGroup.add(targetMesh, targetGlow, targetLabel);
+
+// จุดเชื่อมตรวจสอบสำหรับผู้พัฒนา (เปิด Console แล้วดูพิกัดจริงในฉากได้)
+window.__skyDebug = { skyGroup, targetMesh, targetGlow, ncpLabel, camera, R };
+
+// ฉากหลัง: ทะเลดาวจาง ๆ
+(() => {
+  const n = 900;
+  const pos = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    const u = Math.random() * 2 - 1;
+    const th = Math.random() * Math.PI * 2;
+    const r = R * 2.2, s = Math.sqrt(1 - u * u);
+    pos[i * 3] = r * s * Math.cos(th);
+    pos[i * 3 + 1] = r * u;
+    pos[i * 3 + 2] = r * s * Math.sin(th);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  scene.add(new THREE.Points(geo, new THREE.PointsMaterial({
+    color: 0xbcc8ee, size: 1.6, sizeAttenuation: false,
+    transparent: true, opacity: 0.45, depthWrite: false,
+  })));
+})();
+
+/* ---- กล้อง: หมุนดูรอบทรงกลม (ลาก / สองนิ้วซูม / ล้อเมาส์) ---- */
+const camState = { theta: Math.PI * 0.75, phi: Math.PI * 0.38, radius: 300, minRadius: 140 };
+function applyCamera() {
+  camState.phi = Math.max(0.08, Math.min(Math.PI - 0.08, camState.phi));
+  camState.radius = Math.max(camState.minRadius, Math.min(800, camState.radius));
+  camera.position.set(
+    camState.radius * Math.sin(camState.phi) * Math.cos(camState.theta),
+    camState.radius * Math.cos(camState.phi),
+    camState.radius * Math.sin(camState.phi) * Math.sin(camState.theta)
+  );
+  camera.lookAt(0, 0, 0);
+}
+applyCamera();
+
+const pointers = new Map();
+let pinchDist = null;
+const el = renderer.domElement;
+
+el.addEventListener('pointerdown', (e) => {
+  try { el.setPointerCapture(e.pointerId); } catch (_) { /* บางเบราว์เซอร์ไม่รองรับ */ }
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 2) {
+    const [a, b] = [...pointers.values()];
+    pinchDist = Math.hypot(a.x - b.x, a.y - b.y);
+  }
+});
+el.addEventListener('pointermove', (e) => {
+  const p = pointers.get(e.pointerId);
+  if (!p) return;
+  if (pointers.size === 1) {
+    camState.theta -= (e.clientX - p.x) * 0.0055;
+    camState.phi   -= (e.clientY - p.y) * 0.0045;
+    applyCamera();
+  }
+  p.x = e.clientX; p.y = e.clientY;
+  if (pointers.size === 2 && pinchDist !== null) {
+    const [a, b] = [...pointers.values()];
+    const d = Math.hypot(a.x - b.x, a.y - b.y);
+    camState.radius *= pinchDist / Math.max(d, 1);
+    pinchDist = d;
+    applyCamera();
+  }
+});
+const endPointer = (e) => { pointers.delete(e.pointerId); pinchDist = null; };
+el.addEventListener('pointerup', endPointer);
+el.addEventListener('pointercancel', endPointer);
+el.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  camState.radius *= 1 + Math.sign(e.deltaY) * 0.08;
+  applyCamera();
+}, { passive: false });
+
+/* ---- ปรับขนาดตาม container (และถอยกล้องอัตโนมัติให้ทรงกลมพอดีจอแคบ) ---- */
+function fitCameraToViewport() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  if (!w || !h) return;
+  const vfov = camera.fov * D2R;
+  const hfov = 2 * Math.atan(Math.tan(vfov / 2) * (w / h));
+  const minFov = Math.min(vfov, hfov);
+  camState.minRadius = R * 1.25 / Math.tan(minFov / 2);
+  if (camState.radius < camState.minRadius) camState.radius = camState.minRadius;
+  applyCamera();
+}
+const ro = new ResizeObserver(() => {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  if (!w || !h) return;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  fitCameraToViewport();
+});
+ro.observe(stage);
+
+/* =====================================================================
+   ส่วนที่ 4 — เชื่อม UI และคำนวณ
+   ===================================================================== */
+
+const $ = (id) => document.getElementById(id);
+const raInput = $('raInput'), decInput = $('decInput');
+const latInput = $('latInput'), lonInput = $('lonInput');
+const dtInput = $('dtInput'), tzSelect = $('tzSelect'), liveCheck = $('liveCheck');
+const starPreset = $('starPreset');
+
+// เติมรายชื่อดาวใน select
+STARS.forEach((s, i) => {
+  const opt = document.createElement('option');
+  opt.value = i;
+  opt.textContent = s.name;
+  starPreset.append(opt);
+});
+
+// ค่าเริ่มต้นวันเวลา = ค่ำวันนี้ 20:00 (ดาวตัวอย่างมักอยู่เหนือขอบฟ้า ดูสบายตา)
+// (pad2 ประกาศไว้แล้วในส่วนตัวช่วยจัดรูปแบบ)
+
+// จัดรูป "ตอนนี้" ให้ตรงกับโซนเวลาที่เลือกไว้ (เพื่อแสดงในช่อง input)
+function nowStringInZone() {
+  let offMin;
+  if (tzSelect.value === 'local') offMin = -new Date().getTimezoneOffset();
+  else if (tzSelect.value === '7') offMin = 420;   // UTC+7
+  else offMin = 0;                                  // UTC
+  const d = new Date(Date.now() + offMin * 60000);   // อ่านด้วย getter UTC หลังเลื่อนเวลา
+  return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}T${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())}:${pad2(d.getUTCSeconds())}`;
+}
+
+function eveningString() {
+  const d = new Date();
+  d.setHours(20, 0, 0, 0);
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T20:00:00`;
+}
+dtInput.value = eveningString();
+
+// แปลงค่าที่กรอก → UTC milliseconds ตามโซนเวลาที่เลือก
+function inputToUtcMs() {
+  const v = dtInput.value;
+  if (!v) return Date.now();
+  if (tzSelect.value === 'local') return new Date(v).getTime(); // เวลาท้องถิ่นของอุปกรณ์
+  let wall = v;
+  if (wall.length === 16) wall += ':00';               // เติมวินาทีถ้าขาด
+  const wallAsUTC = Date.parse(wall + 'Z');            // parse แบบ UTC เสมอ
+  if (isNaN(wallAsUTC)) return Date.now();
+  // ถ้าเลือก UTC+7: เวลาท้องถิ่น 19:00 ที่กรุงเทพฯ = UTC 12:00
+  return tzSelect.value === '7' ? wallAsUTC - 7 * 3600000 : wallAsUTC;
+}
+
+// อัปเดตตำแหน่งดาวเป้าหมายบนทรงกลม (ในกรอบศูนย์สูตรฟ้า)
+// รับค่า RA/Dec ที่ normalize แล้วจาก recompute()
+function updateTargetPosition(ra, dec) {
+  const p = skyPoint(ra, dec, R * 0.99);
+  targetMesh.position.copy(p);
+  targetGlow.position.copy(p);
+  // ป้ายวางในแนวรัศมีเดียวกับดาว อยู่นอกทรงกลมเล็กน้อย — ติดกับดาวเสมอ
+  targetLabel.position.copy(p.clone().normalize().multiplyScalar(R * 1.1));
+}
+
+/** อัปเดตการหมุนของกลุ่มท้องฟ้าตาม LST และละติจูด */
+function updateSkyRotation(lstH, latDeg) {
+  const t = lstH * 15 * D2R;   // LST เป็นเรเดียน
+  const phi = latDeg * D2R;
+  // ป้ายขั้วฟ้าเหนือ (NCP): อยู่ที่ alt = lat, az = 0 — คำนวณในกรอบขอบฟ้าโดยตรง
+  ncpLabel.position.set(R * 0.34, R * Math.sin(phi) + 6, -R * Math.cos(phi));
+  // เมทริกซ์หมุนจากกรอบศูนย์สูตรฟ้า → กรอบสามมิติ (x=E, y=U, z=−N)
+  // คอลัมน์คือภาพของเวกเตอร์ฐาน (RA 0h), (RA 6h), (ขั้วฟ้าเหนือ)
+  const st = Math.sin(t), ct = Math.cos(t);
+  const sp = Math.sin(phi), cp = Math.cos(phi);
+  const m = new THREE.Matrix4().set(
+    -st,    ct,     0,   0,   // x = E
+     ct*cp, st*cp,  sp,  0,   // y = U
+     ct*sp, st*sp, -cp,  0,   // z = −N
+     0,     0,      0,   1
+  );
+  skyGroup.quaternion.setFromRotationMatrix(m);
+}
+
+/** ฟังก์ชันหลัก: อ่านค่า คำนวณ และแสดงผลทั้งหมด */
+function recompute() {
+  const ra = ((parseFloat(raInput.value) || 0) % 24 + 24) % 24;
+  const dec = Math.max(-90, Math.min(90, parseFloat(decInput.value) || 0));
+  const lat = Math.max(-90, Math.min(90, parseFloat(latInput.value) || 0));
+  const lon = Math.max(-180, Math.min(180, parseFloat(lonInput.value) || 0));
+
+  const jd = jdFromDate(new Date(inputToUtcMs()));
+  const gmst = gmstHours(jd);
+  const lst = lstHours(jd, lon);
+  const res = equatorialToHorizontal(ra, dec, lat, lst);
+
+  // อัปเดตท้องฟ้าและดาวเป้าหมาย (ใช้ค่าที่ normalize แล้ว)
+  updateSkyRotation(lst, lat);
+  updateTargetPosition(ra, dec);
+
+  // สีของเป้าหมาย: ทอง = เหนือขอบฟ้า, แดง = ใต้ขอบฟ้า
+  const above = res.altDeg > 0;
+  const col = above ? 0xf2c14e : 0xe86a6a;
+  targetMesh.material.color.setHex(col);
+  targetGlow.material.color.setHex(col);
+  targetGlow.material.opacity = above ? 0.22 : 0.12;
+
+  // แสดงผลตัวเลข
+  $('lstOut').textContent = hoursToHMS(lst);
+  $('gmstOut').textContent = `GMST ${hoursToHMS(gmst)}`;
+  const ha = ((lst - ra) % 24 + 24) % 24;
+  const haSigned = ha > 12 ? ha - 24 : ha;
+  $('haOut').textContent = `${haSigned.toFixed(3)} ชม. (${(haSigned * 15).toFixed(1)}°)`;
+  $('altOut').textContent = `${res.altDeg.toFixed(3)}°`;
+  $('altDmsOut').textContent = degToDMS(res.altDeg);
+  if (res.azDeg === null) {
+    $('azOut').textContent = 'ไม่นิยาม';
+    $('azDmsOut').textContent = 'อยู่เหนือศีรษ้า/ใต้ฐานพอดี';
+  } else {
+    $('azOut').textContent = `${res.azDeg.toFixed(3)}°`;
+    $('azDmsOut').textContent = `${degToDMS(res.azDeg)} (${azToCompass(res.azDeg)})`;
+  }
+  const maxAlt = 90 - Math.abs(lat - dec);
+  $('maxAltOut').textContent = `${maxAlt.toFixed(1)}°`;
+
+  const status = $('statusOut');
+  if (above) {
+    status.className = 'status-line';
+    status.textContent = `อยู่เหนือขอบฟ้าเชิงเรขาคณิตที่ความสูง ${res.altDeg.toFixed(1)}°`;
+  } else {
+    status.className = 'status-line below';
+    status.textContent = `ขณะนี้อยู่ใต้ขอบฟ้า (${res.altDeg.toFixed(1)}°) — ยังมองไม่เห็นจากตำแหน่งนี้`;
+  }
+}
+
+/* ---- ผูกเหตุการณ์ UI ---- */
+for (const input of [raInput, decInput, latInput, lonInput]) {
+  input.addEventListener('input', () => { starPreset.value = '-1'; recompute(); });
+}
+dtInput.addEventListener('input', recompute);
+tzSelect.addEventListener('change', recompute);
+
+starPreset.addEventListener('change', () => {
+  const i = parseInt(starPreset.value, 10);
+  if (i >= 0) {
+    raInput.value = STARS[i].ra;
+    decInput.value = STARS[i].dec;
+  }
+  recompute();
+});
+
+document.querySelectorAll('.chip[data-loc]').forEach((chip) => {
+  chip.addEventListener('click', () => {
+    const [la, lo] = chip.dataset.loc.split(',').map(Number);
+    latInput.value = la;
+    lonInput.value = lo;
+    document.querySelectorAll('.chip[data-loc]').forEach((c) => c.classList.remove('active'));
+    chip.classList.add('active');
+    recompute();
+  });
+});
+
+// โหมดเวลาจริง
+let liveTimer = null;
+liveCheck.addEventListener('change', () => {
+  if (liveCheck.checked) {
+    dtInput.disabled = true;
+    liveTimer = setInterval(() => { dtInput.value = nowStringInZone(); recompute(); }, 1000);
+  } else {
+    dtInput.disabled = false;
+    clearInterval(liveTimer);
+    liveTimer = null;
+  }
+});
+
+// โหมดสว่าง/มืด (จำในหน้านี้เท่านั้น)
+(function () {
+  const t = document.querySelector('[data-theme-toggle]');
+  let dark = true;
+  document.documentElement.setAttribute('data-theme', 'dark');
+  t.addEventListener('click', () => {
+    dark = !dark;
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    t.setAttribute('aria-label', dark ? 'สลับไปโหมดสว่าง' : 'สลับไปโหมดมืด');
+    // ปรับสีพื้นใต้ขอบฟ้าตามธีม
+    groundDome.material.color.setHex(dark ? 0x0a0e1e : 0x9fb0cf);
+    groundDome.material.opacity = dark ? 0.82 : 0.55;
+  });
+})();
+
+/* =====================================================================
+   ส่วนที่ 5 — เริ่มทำงาน
+   ===================================================================== */
+function animate() {
+  requestAnimationFrame(animate);
+  renderer.render(scene, camera);
+}
+
+// เริ่มการทำงานเพียงครั้งเดียว (กันลูป render ซ้ำสอง)
+let appStarted = false;
+function startOnce() {
+  if (appStarted) return;
+  appStarted = true;
+  recompute();
+  animate();
+}
+
+document.fonts.ready.then(startOnce);
+// ถ้าฟอนต์โหลดช้า ก็เริ่มได้เลยกันจอว่าง
+setTimeout(startOnce, 1500);
+</script>
+<script data-pplx-inline-edit>
+(function () {
+  if (window === window.top) return;
+
+  const allowedParentOrigins = ["https://www.perplexity.ai","https://perplexity.ai","https://testing.perplexity.ai","https://staging.perplexity.ai","https://*.preview.i.perplexity.ai","http://perplexity.localhost","http://localhost:1420","http://127.0.0.1:1420","http://localhost:3000","http://127.0.0.1:3000","http://localhost:5173","http://127.0.0.1:5173"];
+  const MAX_FONT_BYTES = 500 * 1024;
+  const MAX_TOTAL_FONT_BYTES = 2 * 1024 * 1024;
+  const DEFAULT_LINE_HEIGHT = 16;
+  let scrollForwarding = false;
+  let scrollRaf = 0;
+  let trustedTopOrigin = null;
+
+  // Allow entries like "https://*.preview.i.perplexity.ai" — the wildcard
+  // matches a single DNS label (no dots), so "https://*.foo" cannot stretch
+  // across multiple labels.
+  function matchesAllowedOrigin(origin) {
+    if (!origin) return false;
+    for (const entry of allowedParentOrigins) {
+      if (!entry.includes("*")) {
+        if (entry === origin) return true;
+        continue;
+      }
+      const pattern = new RegExp(
+        "^" +
+          entry.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[^.]+") +
+          "$",
+      );
+      if (pattern.test(origin)) return true;
+    }
+    return false;
+  }
+
+  // Trust decision: when the sender is same-origin-visible (event.origin is a
+  // real origin like https://www.perplexity.ai) we trust event.origin directly.
+  // When event.origin is "null" (opaque broker srcdoc), we fall back to the
+  // broker's stamped `parentOrigin` to identify the top window. The fallback
+  // is claim-only — we rely on the browser's native `targetOrigin` enforcement
+  // on the response path (see postToTrustedTop) to ensure replies can't be
+  // delivered to anyone but the actual top window of that claimed origin.
+  function getTrustedParentOrigin(event) {
+    const forwardedParentOrigin =
+      typeof event.data.parentOrigin === "string" ? event.data.parentOrigin : null;
+    const parentOrigin = event.origin === "null" ? forwardedParentOrigin : event.origin;
+    return matchesAllowedOrigin(parentOrigin) ? parentOrigin : null;
+  }
+
+  // All responses go to window.top with targetOrigin = the allowlisted origin.
+  // An attacker that iframes us inside their own null-origin broker can claim
+  // any parentOrigin they like, but the browser will drop the reply whenever
+  // the real top's origin doesn't match — so the screenshot never leaves.
+  function postToTrustedTop(message) {
+    if (!trustedTopOrigin) return;
+    try {
+      window.top.postMessage(message, trustedTopOrigin);
+    } catch (_error) {}
+  }
+
+  const PICK_CAPABILITIES = ["pick"];
+  const PICK_CHAIN_LENGTH = 4;
+  const PICK_MAX_TEXT_CHARS = 120;
+  const PICK_MAX_HTML_CHARS = 300;
+
+  function truncate(value, maxChars) {
+    return value.length > maxChars ? value.slice(0, maxChars - 1) + "…" : value;
+  }
+
+  function isPickableElement(element) {
+    return (
+      element instanceof Element &&
+      element !== document.documentElement &&
+      element !== document.body
+    );
+  }
+
+  function resolvePickTarget(x, y) {
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    const element = document.elementFromPoint(x, y);
+    return isPickableElement(element) ? element.closest("svg") || element : null;
+  }
+
+  function pickLabel(element) {
+    if (element.id) return element.localName + "#" + element.id;
+    return [element.localName].concat(Array.from(element.classList).slice(0, 2)).join(".");
+  }
+
+  // Only attributes that help find the element in source. data-* values and URL
+  // query strings or fragments can carry tokens.
+  const PICK_ATTRIBUTES = new Set([
+    "id",
+    "class",
+    "name",
+    "type",
+    "role",
+    "alt",
+    "aria-label",
+    "href",
+    "src",
+  ]);
+
+  function pickAttributeValue(attribute) {
+    return attribute.name === "href" || attribute.name === "src"
+      ? attribute.value.split(/[?#]/)[0]
+      : attribute.value;
+  }
+
+  function describePickElement(element) {
+    const chain = [];
+    for (
+      let current = element;
+      isPickableElement(current) && chain.length < PICK_CHAIN_LENGTH;
+      current = current.parentElement
+    ) {
+      chain.unshift(current);
+    }
+    const attributes = Array.from(element.attributes)
+      .filter((attribute) => PICK_ATTRIBUTES.has(attribute.name))
+      .map((attribute) => ` ${attribute.name}="${pickAttributeValue(attribute).replace(/"/g, "&quot;")}"`)
+      .join("");
+    const text = (element.innerText || element.textContent || "").replace(/\s+/g, " ").trim();
+    return {
+      chain: chain.map(pickLabel),
+      html: truncate(`<${element.localName}${attributes}>`, PICK_MAX_HTML_CHARS),
+      text: text ? truncate(text, PICK_MAX_TEXT_CHARS) : undefined,
+    };
+  }
+
+  // Hover asks once per frame, and innerText on a large section forces layout,
+  // so only the rect is re-read while the pointer stays on the same element.
+  // Clicks ask for fresh details since the page may have changed the element.
+  let lastPick = null;
+
+  function describePickTarget(element, fresh) {
+    if (fresh || lastPick?.element !== element) {
+      lastPick = { element, details: describePickElement(element) };
+    }
+    const rect = element.getBoundingClientRect();
+    return {
+      rect: { x: rect.left, y: rect.top, width: rect.width, height: rect.height },
+      ...lastPick.details,
+    };
+  }
+
+  function inlineAll(original, clone) {
+    if (original.nodeType !== 1 || clone.nodeType !== 1) return;
+
+    try {
+      const computedStyle = getComputedStyle(original);
+      // cssText on a computed style is the serialized declaration in modern
+      // Chromium/Safari — a single read beats enumerating ~400 longhand
+      // properties. Firefox returns "" here, so we fall back on empty.
+      const serialized = computedStyle.cssText;
+      if (serialized) {
+        clone.style.cssText = serialized;
+      } else {
+        const parts = new Array(computedStyle.length);
+        for (let index = 0; index < computedStyle.length; index += 1) {
+          const property = computedStyle[index];
+          parts[index] = `${property}:${computedStyle.getPropertyValue(property)};`;
+        }
+        clone.style.cssText = parts.join("");
+      }
+    } catch (_error) {}
+
+    const originalChildren = original.children;
+    const clonedChildren = clone.children;
+    for (
+      let index = 0;
+      index < originalChildren.length && index < clonedChildren.length;
+      index += 1
+    ) {
+      inlineAll(originalChildren[index], clonedChildren[index]);
+    }
+  }
+
+  function extractFontUrl(srcValue) {
+    const matches = [
+      ...srcValue.matchAll(
+        /url\(["']?([^"')]+)["']?\)(?:\s*format\(["']?([^"')]+)["']?\))?/gi,
+      ),
+    ];
+    if (matches.length === 0) return null;
+    const woff2 = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff2"));
+    if (woff2) return woff2[1];
+    const woff = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff"));
+    if (woff) return woff[1];
+    return matches[0][1];
+  }
+
+  // Cache resolved font URL -> data URI across captures. Fonts on a page
+  // essentially never change, and a batch run emits multiple captures back to
+  // back — without this we'd refetch + re-base64 every time.
+  const fontDataUriCache = new Map();
+  const SRC_DECLARATION_RE = /src\s*:\s*[^;}]+/i;
+
+  async function fetchAsDataUri(url) {
+    if (fontDataUriCache.has(url)) return fontDataUriCache.get(url);
+    let dataUri = null;
+    try {
+      const response = await fetch(url, { mode: "cors", credentials: "omit" });
+      if (response.ok) {
+        const blob = await response.blob();
+        if (blob.size <= MAX_FONT_BYTES) {
+          dataUri = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () =>
+              resolve(typeof reader.result === "string" ? reader.result : null);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+          });
+        }
+      }
+    } catch (_error) {
+      dataUri = null;
+    }
+    fontDataUriCache.set(url, dataUri);
+    return dataUri;
+  }
+
+  function collectFontFaceRuleTexts() {
+    const rules = [];
+    for (const sheet of document.styleSheets) {
+      let cssRules;
+      try {
+        cssRules = sheet.cssRules;
+      } catch (_error) {
+        continue;
+      }
+      if (!cssRules) continue;
+      for (const rule of cssRules) {
+        const cssText = rule.cssText || "";
+        if (cssText.startsWith("@font-face")) rules.push(cssText);
+      }
+    }
+    return rules;
+  }
+
+  async function buildInlinedFontCss() {
+    const ruleTexts = collectFontFaceRuleTexts();
+    if (ruleTexts.length === 0) return null;
+
+    const resolved = ruleTexts.map((cssText) => {
+      if (!SRC_DECLARATION_RE.test(cssText)) return null;
+      const srcMatch = cssText.match(/src\s*:\s*([^;}]+)[;}]/i);
+      if (!srcMatch) return null;
+      const url = extractFontUrl(srcMatch[1]);
+      if (!url) return null;
+      try {
+        return { cssText, url: new URL(url, document.baseURI).href };
+      } catch (_error) {
+        return null;
+      }
+    });
+
+    const dataUris = await Promise.all(
+      resolved.map((entry) => (entry ? fetchAsDataUri(entry.url) : Promise.resolve(null))),
+    );
+
+    const inlined = [];
+    let totalBytes = 0;
+    for (let index = 0; index < resolved.length; index += 1) {
+      const entry = resolved[index];
+      const dataUri = dataUris[index];
+      if (!entry || !dataUri) continue;
+      const approxBytes = dataUri.length * 0.75;
+      if (totalBytes + approxBytes > MAX_TOTAL_FONT_BYTES) break;
+      totalBytes += approxBytes;
+      inlined.push(entry.cssText.replace(SRC_DECLARATION_RE, `src: url("${dataUri}")`));
+    }
+    return inlined.length > 0 ? inlined.join("\n") : null;
+  }
+
+  function stripExternal(clone) {
+    const images = clone.querySelectorAll("img");
+    for (let index = 0; index < images.length; index += 1) {
+      const src = images[index].getAttribute("src");
+      if (src && !src.startsWith("data:")) images[index].removeAttribute("src");
+    }
+
+    const elements = clone.querySelectorAll("*");
+    for (let index = 0; index < elements.length; index += 1) {
+      const style = elements[index].style.cssText;
+      if (style && style.includes("url(")) {
+        elements[index].style.cssText = style.replace(
+          /url\(["']?(?!data:)[^)"']*["']?\)/gi,
+          "none",
+        );
+      }
+    }
+  }
+
+  function emitScroll() {
+    scrollRaf = 0;
+    if (!scrollForwarding) return;
+    postToTrustedTop({
+      type: "INLINE_EDIT_SCROLL",
+      scrollX: window.scrollX,
+      scrollY: window.scrollY,
+      capabilities: PICK_CAPABILITIES,
+    });
+  }
+
+  window.addEventListener(
+    "scroll",
+    function () {
+      if (!scrollForwarding || scrollRaf) return;
+      scrollRaf = requestAnimationFrame(emitScroll);
+    },
+    { passive: true, capture: true },
+  );
+
+  async function handleCaptureRequest(event) {
+    const requestId = event.data.requestId;
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    function postResult(dataUrl) {
+      postToTrustedTop({
+        type: "INLINE_EDIT_SCREENSHOT_RESULT",
+        requestId,
+        dataUrl,
+        scrollX,
+        scrollY,
+      });
+    }
+
+    try {
+      // Wait for any pending web fonts to resolve so both inline metrics and
+      // the @font-face inlining below see the same loaded faces.
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (_error) {}
+      }
+
+      const clone = document.documentElement.cloneNode(true);
+      inlineAll(document.documentElement, clone);
+
+      const removedNodes = clone.querySelectorAll("script,link[rel=\"stylesheet\"],style");
+      for (let index = 0; index < removedNodes.length; index += 1) {
+        removedNodes[index].remove();
+      }
+
+      stripExternal(clone);
+
+      // Re-embed web fonts as data-URI @font-face rules so the SVG rasterizer
+      // can resolve them — external font URLs aren't fetched during
+      // foreignObject rendering, which would otherwise force a fallback face
+      // and change text metrics.
+      const inlinedFontCss = await buildInlinedFontCss();
+      if (inlinedFontCss) {
+        const styleEl = document.createElement("style");
+        styleEl.textContent = inlinedFontCss;
+        const head = clone.querySelector("head");
+        if (head) head.appendChild(styleEl);
+        else clone.insertBefore(styleEl, clone.firstChild);
+      }
+
+      const html = new XMLSerializer().serializeToString(clone);
+      const svg =
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">` +
+        '<foreignObject width="100%" height="100%">' +
+        `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;height:${height}px;overflow:hidden">` +
+        `<div style="position:relative;left:-${scrollX}px;top:-${scrollY}px">` +
+        html +
+        "</div></div></foreignObject></svg>";
+      const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+      const image = new Image();
+      image.onload = function () {
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(image, 0, 0);
+        postResult(canvas.toDataURL("image/png"));
+      };
+      image.onerror = function () {
+        postResult(null);
+      };
+      image.src = svgUrl;
+    } catch (_error) {
+      postResult(null);
+    }
+  }
+
+  window.addEventListener("message", function (event) {
+    if (!event.data) return;
+    // Only accept messages from the direct parent frame. Blocks sibling /
+    // unrelated-window postMessage senders that could otherwise reach us.
+    if (event.source !== window.parent) return;
+
+    const trustedParentOrigin = getTrustedParentOrigin(event);
+    if (!trustedParentOrigin) return;
+    trustedTopOrigin = trustedParentOrigin;
+
+    if (event.data.type === "INLINE_EDIT_PICK") {
+      const element = resolvePickTarget(event.data.x, event.data.y);
+      postToTrustedTop({
+        type: "INLINE_EDIT_PICK_RESULT",
+        seq: event.data.seq,
+        target: element ? describePickTarget(element, event.data.fresh === true) : null,
+      });
+      return;
+    }
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_START") {
+      scrollForwarding = true;
+      emitScroll();
+      return;
+    }
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_STOP") {
+      scrollForwarding = false;
+      if (scrollRaf) cancelAnimationFrame(scrollRaf);
+      scrollRaf = 0;
+      return;
+    }
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_BY") {
+      const { deltaX, deltaY, deltaMode } = event.data;
+      if (!scrollForwarding || !Number.isFinite(deltaX) || !Number.isFinite(deltaY)) return;
+      if (deltaMode !== 0 && deltaMode !== 1 && deltaMode !== 2) return;
+      const lineHeight =
+        parseFloat(getComputedStyle(document.documentElement).lineHeight) || DEFAULT_LINE_HEIGHT;
+      const scaleX = deltaMode === 1 ? lineHeight : deltaMode === 2 ? window.innerWidth : 1;
+      const scaleY = deltaMode === 1 ? lineHeight : deltaMode === 2 ? window.innerHeight : 1;
+      // The selection overlay receives the wheel event instead of this iframe.
+      // Instant scrolling preserves trackpad deltas even on smooth-scroll sites.
+      window.scrollBy({ left: deltaX * scaleX, top: deltaY * scaleY, behavior: "instant" });
+      emitScroll();
+      return;
+    }
+
+    if (event.data.type !== "INLINE_EDIT_CAPTURE_REQUEST") return;
+
+    handleCaptureRequest(event);
+  });
+})();
+
+
+</script></body>
+</html>

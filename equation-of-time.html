@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>สมการเวลาและกราฟ Analemma — สอวน. ดาราศาสตร์</title>
+
+<!-- ฟอนต์ไทย IBM Plex Sans Thai -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three.module.js"
+  }
+}
+</script>
+
+<link rel="stylesheet" href="./style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⏳</text></svg>">
+<meta name="theme-color" content="#0b1020">
+<meta name="description" content="แบบจำลองสมการเวลา (Equation of Time) และกราฟรูปเลขแปด Analemma สอวน. ดาราศาสตร์ ค่าย 1">
+</head>
+<body>
+<div class="app">
+
+  <!-- เมนูนำทางแบบลิ้นชักด้านข้าง (YouTube-style Collapsible Side Drawer) -->
+  <div class="drawer-backdrop" id="drawerBackdrop" aria-hidden="true"></div>
+  <aside class="side-drawer" id="sideDrawer" aria-label="สารบัญแบบจำลอง สอวน. ดาราศาสตร์">
+    <div class="drawer-header">
+      <div class="drawer-brand">
+        <svg class="logo" width="34" height="34" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+          <circle cx="22" cy="22" r="19" stroke="var(--color-accent)" stroke-width="2"/>
+          <ellipse cx="22" cy="22" rx="19" ry="7.5" stroke="var(--color-blue)" stroke-width="1.6" transform="rotate(-23 22 22)"/>
+          <circle cx="35.5" cy="13" r="3" fill="var(--color-accent)"/>
+        </svg>
+        <div class="brand-text">
+          <span class="drawer-title">POSN Astro Sim Hub</span>
+          <span class="drawer-subtitle">หลักสูตรค่าย 1 สอวน. ดาราศาสตร์</span>
+        </div>
+      </div>
+      <button type="button" class="drawer-close" id="drawerClose" aria-label="ปิดเมนูนำทาง" title="ปิดเมนู (Esc)">✕</button>
+    </div>
+
+    <div class="drawer-content">
+      <div class="drawer-section">
+        <div class="section-label">ภาพรวมบทเรียน</div>
+        <a class="drawer-item" href="./index.html">
+          <span class="item-icon">🌐</span>
+          <div class="item-info">
+            <span class="item-title">ทรงกลมท้องฟ้าและการแปลงพิกัด</span>
+            <span class="item-sub">ระบบพิกัด 3 มิติ, เส้นสุริยะวิถี และการเดินเวลา</span>
+          </div>
+        </a>
+      </div>
+
+      <div class="drawer-section">
+        <div class="section-label">ทรงกลมท้องฟ้าและระบบพิกัด</div>
+        <a class="drawer-item" href="./circumpolar.html">
+          <span class="item-icon">🔄</span>
+          <div class="item-info">
+            <span class="item-title">ดาวรอบขั้วและการขึ้นตกตามละติจูด</span>
+            <span class="item-sub">ดาวไม่ตก, ขึ้นตกตามปกติ และมุมเงยสูงสุด</span>
+          </div>
+        </a>
+        <a class="drawer-item" href="./seasons-ecliptic.html">
+          <span class="item-icon">☀️</span>
+          <div class="item-info">
+            <span class="item-title">สุริยวิถี 4 ฤดูกาลและกลุ่มดาวจักราศี</span>
+            <span class="item-sub">วิษุวัต, อายัน และทางเดินดวงอาทิตย์ในรอบปี</span>
+          </div>
+        </a>
+      </div>
+
+      <div class="drawer-section">
+        <div class="section-label">ตรีโกณมิติทรงกลมและสามเหลี่ยมดาราศาสตร์</div>
+        <a class="drawer-item" href="./pzx-triangle.html">
+          <span class="item-icon">📐</span>
+          <div class="item-info">
+            <span class="item-title">สามเหลี่ยมดาราศาสตร์ PZX</span>
+            <span class="item-sub">จุด P-Z-X และกฎโคไซน์/ไซน์ทรงกลม</span>
+          </div>
+        </a>
+        <a class="drawer-item" href="./rise-set-condition.html">
+          <span class="item-icon">🌅</span>
+          <div class="item-info">
+            <span class="item-title">สภาวะขึ้น-ตกและมุมชั่วโมงขึ้นตก</span>
+            <span class="item-sub">เงื่อนไขการตัดขอบฟ้า cos H₀ = −tan φ tan δ</span>
+          </div>
+        </a>
+      </div>
+
+      <div class="drawer-section">
+        <div class="section-label">ระบบเวลาและปฏิทินดาราศาสตร์</div>
+        <a class="drawer-item" href="./sidereal-solar.html">
+          <span class="item-icon">⏱️</span>
+          <div class="item-info">
+            <span class="item-title">วันดาราคติและวันสุริยคติ</span>
+            <span class="item-sub">ความแตกต่างของเวลาประมาณ 4 นาทีต่อวัน</span>
+          </div>
+        </a>
+        <a class="drawer-item active" href="./equation-of-time.html">
+          <span class="item-icon">⏳</span>
+          <div class="item-info">
+            <span class="item-title">สมการเวลาและกราฟ Analemma</span>
+            <span class="item-sub">ผลจากความรีวงโคจรและความเอียงแกนโลก</span>
+          </div>
+        </a>
+        <a class="drawer-item" href="./julian-date.html">
+          <span class="item-icon">📅</span>
+          <div class="item-info">
+            <span class="item-title">วันจูเลียน (Julian Date) และเวลาสากล</span>
+            <span class="item-sub">เวลามาตรฐาน UTC+7 และการนับวันจูเลียน</span>
+          </div>
+        </a>
+      </div>
+    </div>
+
+    <div class="drawer-footer">
+      <div class="footer-meta">
+        <span class="center-badge">ศูนย์ สอวน. โรงเรียนพรหมานุสรณ์จังหวัดเพชรบุรี</span>
+        <span class="ref-text">อ้างอิง: เอกสารประกอบการเรียนฉบับเต็ม ค่าย 1</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ส่วนหัวเว็บแอป -->
+  <header class="app-header">
+    <button type="button" class="menu-toggle" id="menuToggle" aria-label="เปิด/ปิดเมนูนำทาง" title="เปิดเมนูบทเรียนจำลอง (Side Menu)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+    <svg class="logo" width="40" height="40" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+      <circle cx="22" cy="22" r="19" stroke="var(--color-accent)" stroke-width="2"/>
+      <ellipse cx="22" cy="16" rx="6" ry="10" stroke="#f6c445" stroke-width="1.8"/>
+      <ellipse cx="22" cy="28" rx="8" ry="10" stroke="#f6c445" stroke-width="1.8"/>
+    </svg>
+    <div class="title-block">
+      <h1>สมการเวลาและกราฟ Analemma (Equation of Time)</h1>
+      <p>ความแตกต่างระหว่างเวลาสุริยคติปรากฏกับเวลาสุริยคติเฉลี่ย (EOT = LAT − LMT)</p>
+    </div>
+    <button class="theme-toggle" data-theme-toggle aria-label="สลับโหมดสว่าง/มืด" title="สลับโหมดสี">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+  </header>
+
+  <!-- แถบนำทางด่วน -->
+  <nav class="module-nav" aria-label="แถบเลือกบทเรียนจำลอง">
+    <a class="nav-tab" href="./index.html">
+      <span>🌐</span> ทรงกลมท้องฟ้า
+    </a>
+    <a class="nav-tab" href="./seasons-ecliptic.html">
+      <span>☀️</span> สุริยวิถี 4 ฤดูกาล
+    </a>
+    <a class="nav-tab" href="./sidereal-solar.html">
+      <span>⏱️</span> วันดาราคติ vs สุริยคติ
+    </a>
+    <button type="button" class="nav-tab active" style="border:none; cursor:default;">
+      <span>⏳</span> สมการเวลา & Analemma
+    </button>
+    <button type="button" class="nav-tab btn-open-menu-chip" id="btnBrowseAllSims" style="border:none; cursor:pointer;">
+      <span>📚</span> สารบัญบทเรียน ▾
+    </button>
+  </nav>
+
+  <div class="layout">
+
+    <!-- ============ ฝั่งซ้าย: แผงควบคุม ============ -->
+    <aside class="panel">
+
+      <!-- ตัวเลือกวันในรอบปี -->
+      <section class="card">
+        <h2><span class="num">1</span>การเลือกวันในรอบปี (Day of Year)</h2>
+
+        <div class="field">
+          <label>วันสำคัญที่มีค่า EOT สูงสุด/ต่ำสุด และตัดศูนย์</label>
+          <div class="chip-row" style="margin-top:6px;">
+            <button type="button" class="chip" id="chipPeakNov">สูงสุด (+16.4m, ~3 พ.ย.)</button>
+            <button type="button" class="chip" id="chipTroughFeb">ต่ำสุด (−14.2m, ~12 ก.พ.)</button>
+            <button type="button" class="chip" id="chipZeroApr">ตัดศูนย์ 0m (~15 เม.ย.)</button>
+            <button type="button" class="chip" id="chipZeroJun">ตัดศูนย์ 0m (~14 มิ.ย.)</button>
+            <button type="button" class="chip" id="chipZeroSep">ตัดศูนย์ 0m (~1 ก.ย.)</button>
+            <button type="button" class="chip" id="chipZeroDec">ตัดศูนย์ 0m (~25 ธ.ค.)</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="label-with-val">
+            <label for="daySlider">วันที่ในรอบปี (Day: 1–365)</label>
+            <span class="val-badge" id="valDateText">~3 พฤศจิกายน (Day 307)</span>
+          </div>
+          <input type="range" id="daySlider" min="1" max="365" step="1" value="307">
+        </div>
+
+        <div class="field" style="margin-top:8px;">
+          <button type="button" class="btn primary" id="btnPlayAnalemma" style="width:100%;">
+            <span id="playAnalemmaIcon">▶</span> เล่นแอนิเมชันตลอดรอบปี 365 วัน
+          </button>
+        </div>
+      </section>
+
+      <!-- การแสดงผลและองค์ประกอบ -->
+      <section class="card">
+        <h2><span class="num">2</span>การแยกองค์ประกอบทางฟิสิกส์ 2 สาเหตุ</h2>
+        <div class="toggles-grid">
+          <label class="toggle"><input type="checkbox" id="chkShowEOTCurve" checked>กราฟรวม EOT (สุริยคติปรากฏ − เฉลี่ย)</label>
+          <label class="toggle"><input type="checkbox" id="chkShowEccentricity" checked>ผลจากความรีวงโคจร (e = 0.0167)</label>
+          <label class="toggle"><input type="checkbox" id="chkShowObliquity" checked>ผลจากความเอียงแกนโลก (ε = 23.44°)</label>
+          <label class="toggle"><input type="checkbox" id="chkShowAnalemma3D" checked>เส้นเลขแปด Analemma 3 มิติ</label>
+          <label class="toggle"><input type="checkbox" id="chkShowMeridianLine" checked>เส้นเมริเดียนท้องถิ่น (เที่ยงวัน)</label>
+        </div>
+      </section>
+
+      <!-- ผลการคำนวณเปรียบเทียบเวลานาฬิกากับแดด -->
+      <section class="card results-card">
+        <h2><span class="num">3</span>การวิเคราะห์สมการเวลา (EOT Analytics)</h2>
+
+        <div class="pzx-classification-box" id="eotBox" style="margin-bottom:12px; background:rgba(246, 196, 69, 0.12); border-color:rgba(246, 196, 69, 0.4);">
+          <div class="pzx-badge" id="eotBadge" style="background:#f6c445; color:#111;">นาฬิกาแดดเร็วกว่านาฬิกาจักรกล +16.4 นาที</div>
+          <p class="pzx-desc" id="eotDesc">ดวงอาทิตย์จริงข้ามเมริเดียนท้องถิ่นก่อนเวลา 12:00 น. ของเวลาสุริยคติเฉลี่ย</p>
+        </div>
+
+        <div class="result-grid">
+          <div class="result-item">
+            <span class="k">ค่าสมการเวลา (EOT)</span>
+            <span class="v highlight" id="resEOT">+16.42 นาที</span>
+          </div>
+          <div class="result-item">
+            <span class="k">เดคลิเนชัน δ<sub>☉</sub></span>
+            <span class="v" id="resDec">−15.2°</span>
+          </div>
+          <div class="result-item">
+            <span class="k">ผลจากความรีวงโคจร (E<sub>e</sub>)</span>
+            <span class="v" id="resTermE">−3.82 นาที</span>
+          </div>
+          <div class="result-item">
+            <span class="k">ผลจากความเอียงแกน (E<sub>ε</sub>)</span>
+            <span class="v" id="resTermEps">+20.24 นาที</span>
+          </div>
+          <div class="result-item">
+            <span class="k">เวลาที่อาทิตย์ผ่านเมริเดียน</span>
+            <span class="v" id="resMeridianTime">11:43:35 น.</span>
+          </div>
+          <div class="result-item">
+            <span class="k">สถานะดวงอาทิตย์จริง</span>
+            <span class="v" id="resSunStatus">เดินเร็วกว่าเวลาเฉลี่ย</span>
+          </div>
+        </div>
+
+        <div class="derivation-card" style="margin-top:14px;">
+          <h3>สูตรและฟิสิกส์ สอวน. ดาราศาสตร์</h3>
+          <div class="step-line"><span class="step-num">1</span> EOT = LAT − LMT = เวลาสุริยคติปรากฏ − เวลาสุริยคติเฉลี่ย</div>
+          <div class="step-line"><span class="step-num">2</span> EOT ≈ E<sub>e</sub> + E<sub>ε</sub> (ผลบวกของ 2 สาเหตุอิสระ)</div>
+          <div class="step-line"><span class="step-num">3</span> E<sub>e</sub> ≈ −7.66 sin M (รอบ 1 ปี แอมพลิจูด ~7.7 นาที ตามกฎข้อ 2 เคปเลอร์)</div>
+          <div class="step-line"><span class="step-num">4</span> E<sub>ε</sub> ≈ 9.87 sin 2λ (รอบ 0.5 ปี แอมพลิจูด ~9.9 นาที จากความเอียง 23.44°)</div>
+        </div>
+      </section>
+
+    </aside>
+
+    <!-- ============ ฝั่งขวา: พื้นที่จำลอง 3 มิติ และ กราฟ 2 มิติ ============ -->
+    <section class="sky-card" aria-label="สมการเวลาและ Analemma">
+      <div class="stage" id="stage" style="display:flex; flex-direction:column;">
+        
+        <!-- พื้นที่ 3D ท้องฟ้าและ Analemma Loop (ครึ่งบน) -->
+        <div id="webglContainer" style="width:100%; height:62%; position:relative;"></div>
+
+        <!-- พื้นที่กราฟ 2D Live Interactive EOT Curve (ครึ่งล่าง) -->
+        <div class="eot-graph-container" style="width:100%; height:38%; background:#090d18; border-top:1px solid var(--color-border); padding:10px 16px; position:relative;">
+          <canvas id="eotCanvas" style="width:100%; height:100%; display:block;"></canvas>
+        </div>
+
+        <!-- แถบเครื่องมือมุมมองกล้อง -->
+        <div class="stage-toolbar" style="bottom: 40%;">
+          <button type="button" class="tool-btn" id="btnResetView" title="รีเซ็ตมุมมอง">
+            <span>🎯</span> รีเซ็ตมุมมอง
+          </button>
+          <button type="button" class="tool-btn" id="btnViewFront" title="มองตรงเข้าหาเส้นเลขแปด">
+            <span>👁️</span> มองตรงหน้า (Front View)
+          </button>
+          <button type="button" class="tool-btn" id="btnViewSide" title="มองด้านข้าง">
+            <span>📐</span> มองด้านข้าง (Side View)
+          </button>
+        </div>
+
+        <!-- กล่องคำอธิบายสัญลักษณ์ด้านล่าง -->
+        <div class="legend" style="bottom:8px;">
+          <div class="legend-item"><span class="legend-dot" style="background:#f6c445;"></span> กราฟรวม EOT (นาที)</div>
+          <div class="legend-item"><span class="legend-dot" style="background:#4fa3e3;"></span> ผลจากความรีวงโคจร E<sub>e</sub> (e = 0.0167)</div>
+          <div class="legend-item"><span class="legend-dot" style="background:#52b788;"></span> ผลจากความเอียงแกนโลก E<sub>ε</sub> (ε = 23.44°)</div>
+          <div class="legend-item"><span class="legend-dot" style="background:#ff4d6d; box-shadow:0 0 8px #ff4d6d;"></span> วันที่ปัจจุบันบนเส้นโค้ง</div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script type="module" src="./equation-of-time-app.js"></script>
+</body>
+</html>

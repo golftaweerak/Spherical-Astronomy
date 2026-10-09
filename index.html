@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ทรงกลมท้องฟ้า — แปลงพิกัดศูนย์สูตรฟ้า (RA/Dec) เป็นพิกัดขอบฟ้า (Alt/Az)</title>
+
+<!-- ฟอนต์ไทย IBM Plex Sans Thai -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Three.js โหลดจาก vendor ในเครื่อง (ทำงานแบบ Offline ในค่ายได้ 100%) -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three.module.js"
+  }
+}
+</script>
+
+<link rel="stylesheet" href="./style.css">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌟</text></svg>">
+<meta name="theme-color" content="#0b1020">
+<meta name="description" content="แบบจำลองดาราศาสตร์ 3 มิติเชิงปฏิสัมพันธ์ สำหรับหลักสูตร สอวน. ดาราศาสตร์ ค่าย 1">
+</head>
+<body>
+<div class="app">
+
+  <!-- เมนูนำทางแบบลิ้นชักด้านข้าง (YouTube-style Collapsible Side Drawer) -->
+  <div class="drawer-backdrop" id="drawerBackdrop" aria-hidden="true"></div>
+  <aside class="side-drawer" id="sideDrawer" aria-label="สารบัญแบบจำลอง สอวน. ดาราศาสตร์">
+    <div class="drawer-header">
+      <div class="drawer-brand">
+        <svg class="logo" width="34" height="34" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+          <circle cx="22" cy="22" r="19" stroke="var(--color-accent)" stroke-width="2"/>
+          <ellipse cx="22" cy="22" rx="19" ry="7.5" stroke="var(--color-blue)" stroke-width="1.6" transform="rotate(-23 22 22)"/>
+          <circle cx="35.5" cy="13" r="3" fill="var(--color-accent)"/>
+        </svg>
+        <div class="brand-text">
+          <span class="drawer-title">POSN Astro Sim Hub</span>
+          <span class="drawer-subtitle">หลักสูตรค่าย 1 สอวน. ดาราศาสตร์</span>
+        </div>
+      </div>
+      <button type="button" class="drawer-close" id="drawerClose" aria-label="ปิดเมนูนำทาง" title="ปิดเมนู (Esc)">✕</button>
+    </div>
+
+    <div class="drawer-content">
+      <!-- ส่วนภาพรวม -->
+      <div class="drawer-section">
+        <div class="section-label">ภาพรวมบทเรียน</div>
+        <a class="drawer-item active" href="./index.html">
+          <span class="item-icon">🌐</span>
+          <div class="item-info">
+            <span class="item-title">ทรงกลมท้องฟ้าและการแปลงพิกัด</span>
+            <span class="item-sub">ระบบพิกัด 3 มิติ, เส้นสุริยะวิถี และเวลา</span>
+          </div>
+        </a>
+      </div>
+
+      <!-- ภาค 1: ทรงกลมท้องฟ้าและระบบพิกัดดาราศาสตร์ -->
+      <div class="drawer-section">
+        <div class="section-label">ทรงกลมท้องฟ้าและระบบพิกัด</div>
+        <a class="drawer-item" href="./index.html#coord-comparison">
+          <span class="item-icon">🧭</span>
+          <div class="item-info">
+            <span class="item-title">วงกลมใหญ่และ 4 ระบบพิกัด</span>
+            <span class="item-sub">ขอบฟ้า, ศูนย์สูตรฟ้า, สุริยะวิถี, กาแล็กซี</span>
+          </div>
+        </a>
+        <a class="drawer-item" href="./circumpolar.html">
+          <span class="item-icon">🔄</span>
+          <div class="item-info">
+            <span class="item-title">ดาวรอบขั้วและการขึ้นตกตามละติจูด</span>
+            <span class="item-sub">ดาวไม่ตก, ขึ้นตกตามปกติ และมุมเงยสูงสุด</span>
+          </div>
+        </a>
+        <a class="drawer-item" href="./seasons-ecliptic.html">
+          <span class="item-icon">☀️</span>
+          <div class="item-info">
+            <span class="item-title">สุริยวิถี 4 ฤดูกาลและกลุ่มดาวจักราศี</span>
+            <span class="item-sub">วิษุวัต, อายัน และทางเดินดวงอาทิตย์ในรอบปี</span>
+          </div>
+        </a>
+      </div>
+
+      <!-- ภาค 2: ตรีโกณมิติทรงกลมและการแปลงพิกัด -->
+      <div class="drawer-section">
+        <div class="section-label">ตรีโกณมิติทรงกลมและสามเหลี่ยมดาราศาสตร์</div>
+        <a class="drawer-item" href="./pzx-triangle.html">
+          <span class="item-icon">📐</span>
+          <div class="item-info">
+            <span class="item-title">สามเหลี่ยมดาราศาสตร์ PZX</span>
+            <span class="item-sub">จุด P-Z-X และกฎโคไซน์/ไซน์ทรงกลม</span>
+          </div>
+        </a>
+        <a class="drawer-item" href="./rise-set-condition.html">
+          <span class="item-icon">🌅</span>
+          <div class="item-info">
+            <span class="item-title">สภาวะขึ้น-ตกและมุมชั่วโมงขึ้นตก</span>
+            <span class="item-sub">เงื่อนไขการตัดขอบฟ้า cos H₀ = −tan φ tan δ</span>
+          </div>
+        </a>
+      </div>
+
+      <!-- ภาค 3: ระบบเวลาและปฏิทินดาราศาสตร์ -->
+      <div class="drawer-section">
+        <div class="section-label">ระบบเวลาและปฏิทินดาราศาสตร์</div>
+        <a class="drawer-item" href="./sidereal-solar.html">
+          <span class="item-icon">⏱️</span>
+          <div class="item-info">
+            <span class="item-title">วันดาราคติและวันสุริยคติ</span>
+            <span class="item-sub">ความแตกต่างของเวลาประมาณ 4 นาทีต่อวัน</span>
+          </div>
+        </a>
+        <a class="drawer-item" href="./equation-of-time.html">
+          <span class="item-icon">⏳</span>
+          <div class="item-info">
+            <span class="item-title">สมการเวลาและกราฟ Analemma</span>
+            <span class="item-sub">ผลจากความรีวงโคจรและความเอียงแกนโลก</span>
+          </div>
+        </a>
+        <a class="drawer-item" href="./julian-date.html">
+          <span class="item-icon">📅</span>
+          <div class="item-info">
+            <span class="item-title">วันจูเลียน (Julian Date) และเวลาสากล</span>
+            <span class="item-sub">เวลามาตรฐาน UTC+7 และการนับวันจูเลียน</span>
+          </div>
+        </a>
+      </div>
+    </div>
+
+    <div class="drawer-footer">
+      <div class="footer-meta">
+        <span class="center-badge">ศูนย์ สอวน.วิชาดาราศาสตร์ ม.ปลาย โรงเรียนพรหมานุสรณ์จังหวัดเพชรบุรี</span>
+      </div>
+    </div>
+  </aside>
+
+  <header class="app-header">
+    <button type="button" class="menu-toggle" id="menuToggle" aria-label="เปิด/ปิดเมนูนำทาง" title="เปิดเมนูบทเรียนจำลอง (Side Menu)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+    <svg class="logo" width="40" height="40" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+      <circle cx="22" cy="22" r="19" stroke="var(--color-accent)" stroke-width="2"/>
+      <ellipse cx="22" cy="22" rx="19" ry="7.5" stroke="var(--color-blue)" stroke-width="1.6" transform="rotate(-23 22 22)"/>
+      <circle cx="35.5" cy="13" r="3" fill="var(--color-accent)"/>
+      <circle cx="8" cy="27" r="2" fill="var(--color-blue)"/>
+    </svg>
+    <div class="title-block">
+      <h1>ทรงกลมท้องฟ้า</h1>
+      <p>แปลงพิกัดศูนย์สูตรฟ้า (RA/Dec) → พิกัดขอบฟ้า (Alt/Az) และแบบจำลอง</p>
+    </div>
+    <button class="theme-toggle" data-theme-toggle aria-label="สลับโหมดสว่าง/มืด" title="สลับโหมดสี">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+  </header>
+
+  <!-- แถบสลับบทเรียนจำลองด่วน (Quick Module Bar) -->
+  <nav class="module-nav" aria-label="แถบเลือกบทเรียนจำลอง">
+    <button type="button" class="nav-tab active" id="btnQuickOverview" style="border:none; cursor:pointer;">
+      <span>🌐</span> ภาพรวมทรงกลมท้องฟ้า
+    </button>
+    <button type="button" class="nav-tab btn-open-menu-chip" id="btnBrowseAllSims" style="border:none; cursor:pointer;">
+      <span>📚</span> สารบัญบทเรียน ▾
+    </button>
+  </nav>
+
+  <div class="layout">
+
+    <!-- ============ ฝั่งซ้าย: แผงควบคุม ============ -->
+    <aside class="panel">
+
+      <section class="card">
+        <h2><span class="num">1</span>ระบุพิกัดวัตถุท้องฟ้า</h2>
+
+        <!-- สลับโหมดการระบุพิกัด (สองทาง: พิกัดศูนย์สูตรฟ้า vs พิกัดขอบฟ้า) -->
+        <div class="coord-mode-toggle" role="tablist">
+          <button type="button" class="mode-tab active" id="modeEquatorial" role="tab" aria-selected="true">
+            🌐 ระบุพิกัดศูนย์สูตร
+          </button>
+          <button type="button" class="mode-tab" id="modeHorizontal" role="tab" aria-selected="false">
+            📐 ระบุพิกัดขอบฟ้า
+          </button>
+        </div>
+
+        <!-- โหมด 1: พิกัดศูนย์สูตรฟ้า (RA / Dec) -->
+        <div id="boxEquatorialInputs">
+          <div class="field">
+            <label for="starPreset">เลือกดาวตัวอย่าง (หรือกำหนดเอง)</label>
+            <select id="starPreset">
+              <option value="-1">— กำหนดเอง —</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="raInput">ไรท์แอสเซนชัน RA (ชั่วโมง 0–24)</label>
+            <input type="number" id="raInput" min="0" max="24" step="0.0001" value="18.6156">
+            <div class="hint-text">เช่น Vega = 18.616 ชม. (18 ชม. 36 นาที 56 วินาที)</div>
+          </div>
+
+          <div class="field">
+            <label for="decInput">เดคลิเนชัน Dec (องศา −90 ถึง +90)</label>
+            <input type="number" id="decInput" min="-90" max="90" step="0.0001" value="38.7836">
+            <div class="hint-text">บวก = ฟ้าเหนือ, ลบ = ฟ้าใต้</div>
+          </div>
+        </div>
+
+        <!-- โหมด 2: พิกัดขอบฟ้า (Alt / Az) -->
+        <div id="boxHorizontalInputs" style="display:none;">
+          <div class="field">
+            <label for="altInput">มุมเงย Altitude, h (องศา −90 ถึง +90)</label>
+            <input type="number" id="altInput" min="-90" max="90" step="0.01" value="45.00">
+            <div class="hint-text">0° = ที่ขอบฟ้า, +90° = จุดจอมฟ้า (Zenith), ลบ = ใต้ขอบฟ้า</div>
+          </div>
+
+          <div class="field">
+            <label for="azInput">มุมทิศ Azimuth, A (องศา 0–360)</label>
+            <input type="number" id="azInput" min="0" max="360" step="0.01" value="160.00">
+            <div class="hint-text">วัดตามเข็มจากทิศเหนือ (0°=เหนือ, 90°=ออก, 180°=ใต้, 270°=ตก)</div>
+          </div>
+
+          <div class="chip-row" style="margin-top: 8px;">
+            <button type="button" class="chip-target" data-altaz="90,0">จุดจอมฟ้า Z (90°)</button>
+            <button type="button" class="chip-target" data-altaz="45,160">เป้าหมาย A (45°, 160°)</button>
+            <button type="button" class="chip-target" data-altaz="35,120">เป้าหมาย B (35°, 120°)</button>
+            <button type="button" class="chip-target" data-altaz="0,90">ขอบฟ้าทิศออก (0°, 90°)</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">2</span>ตำแหน่งผู้สังเกตและเวลา</h2>
+
+        <div class="row">
+          <div class="field">
+            <label for="latInput">ละติจูด (องศา)</label>
+            <input type="number" id="latInput" min="-90" max="90" step="0.0001" value="13.7560">
+          </div>
+          <div class="field">
+            <label for="lonInput">ลองจิจูด (องศา E+)</label>
+            <input type="number" id="lonInput" min="-180" max="180" step="0.0001" value="100.5018">
+          </div>
+        </div>
+        <div class="chip-row">
+          <button class="chip" data-loc="13.7560,100.5018">กรุงเทพฯ</button>
+          <button class="chip" data-loc="18.7904,98.9847">เชียงใหม่</button>
+          <button class="chip" data-loc="0.0000,0.0000">ศูนย์สูตร (0°)</button>
+          <button class="chip" data-loc="90.0000,0.0000">ขั้วโลกเหนือ (90°)</button>
+        </div>
+
+        <div class="field" style="margin-top:14px">
+          <label for="dtInput">วันที่และเวลา</label>
+          <input type="datetime-local" id="dtInput" step="1">
+        </div>
+
+        <div class="field">
+          <label for="tzSelect">ความหมายของเวลาที่กรอก</label>
+          <select id="tzSelect">
+            <option value="local">เวลาท้องถิ่นของอุปกรณ์นี้</option>
+            <option value="utc">UTC</option>
+            <option value="7" selected>UTC+7 (เวลาประเทศไทย)</option>
+          </select>
+        </div>
+
+        <div class="check-row" style="margin-top:10px">
+          <input type="checkbox" id="liveCheck">
+          <label for="liveCheck">ใช้เวลาจริง</label>
+        </div>
+
+        <!-- กล่องควบคุมการเดินเวลา -->
+        <div class="time-control-box" style="margin-top:12px">
+          <div class="time-control-header">
+            <span class="tc-title">⏱️ การจำลองเวลา</span>
+            <button type="button" class="btn-play-pause" id="btnPlayPause">
+              <span id="playIcon">▶</span> <span id="playText">เริ่ม</span>
+            </button>
+          </div>
+          <div class="speed-row">
+            <span class="speed-label">ความเร็ว:</span>
+            <button type="button" class="chip-speed" data-speed="60">60×</button>
+            <button type="button" class="chip-speed active" data-speed="600">600× (10น./วิ)</button>
+            <button type="button" class="chip-speed" data-speed="3600">3600× (1ชม./วิ)</button>
+          </div>
+          <div class="step-row" style="margin-top:8px">
+            <button type="button" class="chip-step" data-step="-3600">−1 ชม.</button>
+            <button type="button" class="chip-step" data-step="-600">−10 นาที</button>
+            <button type="button" class="chip-step" data-step="600">+10 นาที</button>
+            <button type="button" class="chip-step" data-step="3600">+1 ชม.</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">3</span>ผลการแปลงพิกัด</h2>
+        <div class="result-grid">
+          <div class="result-box">
+            <div class="label">เวลาไซดีเรียลท้องถิ่น (LST)</div>
+            <div class="value" id="lstOut">–</div>
+            <div class="sub" id="gmstOut">–</div>
+          </div>
+          <div class="result-box">
+            <div class="label">มุมชั่วโมง H = LST − RA</div>
+            <div class="value" id="haOut">–</div>
+            <div class="sub" id="haSubOut">ลบ = ยังไม่ถึงเมริเดียน</div>
+          </div>
+          <div class="result-box" id="resBoxAlt">
+            <div class="label">มุมเงย (Altitude, h)</div>
+            <div class="value" id="altOut">–</div>
+            <div class="sub" id="altDmsOut">–</div>
+          </div>
+          <div class="result-box" id="resBoxAz">
+            <div class="label">มุมทิศ (Azimuth, A)</div>
+            <div class="value" id="azOut">–</div>
+            <div class="sub" id="azDmsOut">–</div>
+          </div>
+          <div class="result-box" id="resBoxRa">
+            <div class="label">ไรท์แอสเซนชัน (RA, α)</div>
+            <div class="value" id="raResultOut">–</div>
+            <div class="sub" id="raHmsOut">–</div>
+          </div>
+          <div class="result-box" id="resBoxDec">
+            <div class="label">เดคลิเนชัน (Dec, δ)</div>
+            <div class="value" id="decResultOut">–</div>
+            <div class="sub" id="decDmsOut">–</div>
+          </div>
+        </div>
+        <div class="status-line" id="statusOut">–</div>
+        <div class="result-grid" style="margin-top:10px">
+          <div class="result-box">
+            <div class="label">มุมเงยสูงสุดเมื่อผ่านเมริเดียน</div>
+            <div class="value" id="maxAltOut">–</div>
+            <div class="sub">90° − |φ − δ|</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>สูตรที่ใช้</h2>
+        <p class="math-note">
+          <strong>1. แปลงศูนย์สูตร → ขอบฟ้า:</strong><br>
+          <code>sin h = sin φ · sin δ + cos φ · cos δ · cos H</code><br>
+          <code>cos A = (sin δ − sin φ · sin h) / (cos φ · cos h)</code><br>
+          <br>
+          <strong>2. แปลงขอบฟ้า → ศูนย์สูตร:</strong><br>
+          <code>sin δ = sin φ · sin h + cos φ · cos h · cos A</code><br>
+          <code>sin H = −cos h · sin A / cos δ</code> &nbsp; และ &nbsp; <code>RA = LST − H</code><br>
+          <br>
+          LST คำนวณจากสูตร GMST ของ USNO บวกลองจิจูดตะวันออก (1° = 4 นาที)
+        </p>
+      </section>
+
+    </aside>
+
+    <!-- ============ ฝั่งขวา: ทรงกลมท้องฟ้า 3D ============ -->
+    <section class="sky-card" aria-label="ทรงกลมท้องฟ้าสามมิติ">
+      <div class="stage" id="stage"></div>
+
+      <!-- แถบปุ่มควบคุมการแสดงผลและเส้นช่วยอ่านพิกัด -->
+      <div class="stage-toolbar">
+        <button type="button" class="tool-btn active-green" id="toggleAltAz" aria-pressed="true">
+          <span>📐</span> พิกัดขอบฟ้า (Alt/Az)
+        </button>
+        <button type="button" class="tool-btn active-blue" id="toggleRaDec" aria-pressed="true">
+          <span>🌐</span> พิกัดศูนย์สูตร (RA/Dec)
+        </button>
+        <button type="button" class="tool-btn active-amber" id="toggleDiurnalPath" aria-pressed="true">
+          <span>💫</span> เส้นทางดาว (Diurnal)
+        </button>
+        <button type="button" class="tool-btn active-amber" id="toggleEcliptic" aria-pressed="true">
+          <span>☀️</span> สุริยวิถี (Ecliptic)
+        </button>
+        <button type="button" class="tool-btn active" id="toggleGround" aria-pressed="true">
+          <span>🌍</span> ระนาบขอบฟ้า
+        </button>
+        <button type="button" class="tool-btn active" id="toggleLabels" aria-pressed="true">
+          <span>🏷️</span> ป้ายกำกับ
+        </button>
+        <button type="button" class="tool-btn active" id="toggleGrid" aria-pressed="true">
+          <span>🧭</span> กริดพิกัด
+        </button>
+        <button type="button" class="tool-btn" id="toolBtnPlay" title="เดินเวลาจำลอง">
+          <span>▶</span> เริ่ม
+        </button>
+        <button type="button" class="tool-btn" id="btnResetView" title="รีเซ็ตมุมมอง">
+          <span>🔄</span> รีเซ็ตมุมมอง
+        </button>
+      </div>
+
+      <div class="hint">ลากเพื่อหมุน · ซูมด้วยสองนิ้วหรือล้อเมาส์</div>
+      <div class="legend">
+        <span class="item"><span class="dot" style="background:#f2c14e"></span>ดาวเป้าหมาย</span>
+        <span class="item"><span class="dot" style="background:#f59e0b"></span>เส้นทางดาวประจำวัน (Diurnal Path)</span>
+        <span class="item"><span class="dot" style="background:#6ea8e8"></span>ศูนย์สูตรฟ้า / เดคลิเนชัน</span>
+        <span class="item"><span class="dot" style="background:#fbbf24"></span>เส้นสุริยวิถี (Ecliptic)</span>
+        <span class="item"><span class="dot" style="background:#7dd6a8"></span>ระนาบขอบฟ้า / มุมเงย / จุดจอมฟ้า</span>
+        <span class="item"><span class="dot" style="background:#b8a0e8"></span>จุดวสันตวิษุวัต (♈)</span>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script type="module" src="./app.js"></script>
+</body>
+</html>

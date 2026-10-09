@@ -1,0 +1,10 @@
+{
+  "name": "POSN Astronomy 3D Interactive Simulations",
+  "short_name": "POSN Astro",
+  "description": "แบบจำลองดาราศาสตร์ 3 มิติเชิงปฏิสัมพันธ์ สำหรับหลักสูตร สอวน. ดาราศาสตร์ ค่าย 1",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0b1020",
+  "theme_color": "#0b1020",
+  "orientation": "any"
+}

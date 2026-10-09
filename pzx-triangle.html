@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>สามเหลี่ยมดาราศาสตร์ PZX — สอวน. ดาราศาสตร์ ค่าย 1</title>
+
+<!-- ฟอนต์ไทย IBM Plex Sans Thai -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Three.js Offline -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three.module.js"
+  }
+}
+</script>
+
+<link rel="stylesheet" href="./style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📐</text></svg>">
+<meta name="theme-color" content="#0b1020">
+<meta name="description" content="แบบจำลองสามเหลี่ยมดาราศาสตร์ PZX (The Astronomical Triangle) และตรีโกณมิติทรงกลม สอวน. ดาราศาสตร์ ค่าย 1">
+</head>
+<body>
+<div class="app">
+
+  <!-- เมนูนำทางแบบลิ้นชักด้านข้าง (YouTube-style Collapsible Side Drawer) -->
+  <div class="drawer-backdrop" id="drawerBackdrop" aria-hidden="true"></div>
+  <aside class="side-drawer" id="sideDrawer" aria-label="สารบัญแบบจำลอง สอวน. ดาราศาสตร์">
+    <div class="drawer-header">
+      <div class="drawer-brand">
+        <svg class="logo" width="34" height="34" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+          <circle cx="22" cy="22" r="19" stroke="var(--color-accent)" stroke-width="2"/>
+          <ellipse cx="22" cy="22" rx="19" ry="7.5" stroke="var(--color-blue)" stroke-width="1.6" transform="rotate(-23 22 22)"/>
+          <circle cx="35.5" cy="13" r="3" fill="var(--color-accent)"/>
+        </svg>
+        <div class="brand-text">
+          <span class="drawer-title">POSN Astro Sim Hub</span>
+          <span class="drawer-subtitle">หลักสูตรค่าย 1 สอวน. ดาราศาสตร์</span>
+        </div>
+      </div>
+      <button type="button" class="drawer-close" id="drawerClose" aria-label="ปิดเมนูนำทาง" title="ปิดเมนู (Esc)">✕</button>
+    </div>
+
+    <div class="drawer-content">
+      <div class="drawer-section">
+        <div class="section-label">ภาพรวมบทเรียน</div>
+        <a class="drawer-item" href="./index.html">
+          <span class="item-icon">🌐</span>
+          <div class="item-info">
+            <span class="item-title">ทรงกลมท้องฟ้าและการแปลงพิกัด</span>
+            <span class="item-sub">ระบบพิกัด 3 มิติ, เส้นสุริยะวิถี และการเดินเวลา</span>
+          </div>
+        </a>
+      </div>
+
+      <div class="drawer-section">
+        <div class="section-label">ทรงกลมท้องฟ้าและระบบพิกัด</div>
+        <a class="drawer-item" href="./index.html#coord-comparison">
+          <span class="item-icon">🧭</span>
+          <div class="item-info">
+            <span class="item-title">วงกลมใหญ่และ 4 ระบบพิกัด</span>
+            <span class="item-sub">ขอบฟ้า, ศูนย์สูตรฟ้า, สุริยะวิถี, กาแล็กซี</span>
+          </div>
+        </a>
+        <a class="drawer-item" href="./circumpolar.html">
+          <span class="item-icon">🔄</span>
+          <div class="item-info">
+            <span class="item-title">ดาวรอบขั้วและการขึ้นตกตามละติจูด</span>
+            <span class="item-sub">ดาวไม่ตก, ขึ้นตกตามปกติ และมุมเงยสูงสุด</span>
+          </div>
+        </a>
+        <a class="drawer-item" href="./seasons-ecliptic.html">
+          <span class="item-icon">☀️</span>
+          <div class="item-info">
+            <span class="item-title">สุริยวิถี 4 ฤดูกาลและกลุ่มดาวจักราศี</span>
+            <span class="item-sub">วิษุวัต, อายัน และทางเดินดวงอาทิตย์ในรอบปี</span>
+          </div>
+        </a>
+      </div>
+
+      <div class="drawer-section">
+        <div class="section-label">ตรีโกณมิติทรงกลมและสามเหลี่ยมดาราศาสตร์</div>
+        <a class="drawer-item active" href="./pzx-triangle.html">
+          <span class="item-icon">📐</span>
+          <div class="item-info">
+            <span class="item-title">สามเหลี่ยมดาราศาสตร์ PZX</span>
+            <span class="item-sub">จุด P-Z-X และกฎโคไซน์/ไซน์ทรงกลม</span>
+          </div>
+        </a>
+        <a class="drawer-item" href="./rise-set-condition.html">
+          <span class="item-icon">🌅</span>
+          <div class="item-info">
+            <span class="item-title">สภาวะขึ้น-ตกและมุมชั่วโมงขึ้นตก</span>
+            <span class="item-sub">เงื่อนไขการตัดขอบฟ้า cos H₀ = −tan φ tan δ</span>
+          </div>
+        </a>
+      </div>
+
+      <div class="drawer-section">
+        <div class="section-label">ระบบเวลาและปฏิทินดาราศาสตร์</div>
+        <a class="drawer-item" href="./sidereal-solar.html">
+          <span class="item-icon">⏱️</span>
+          <div class="item-info">
+            <span class="item-title">วันดาราคติและวันสุริยคติ</span>
+            <span class="item-sub">ความแตกต่างของเวลาประมาณ 4 นาทีต่อวัน</span>
+          </div>
+        </a>
+        <a class="drawer-item" href="./equation-of-time.html">
+          <span class="item-icon">⏳</span>
+          <div class="item-info">
+            <span class="item-title">สมการเวลาและกราฟ Analemma</span>
+            <span class="item-sub">ผลจากความรีวงโคจรและความเอียงแกนโลก</span>
+          </div>
+        </a>
+        <a class="drawer-item" href="./julian-date.html">
+          <span class="item-icon">📅</span>
+          <div class="item-info">
+            <span class="item-title">วันจูเลียน (Julian Date) และเวลาสากล</span>
+            <span class="item-sub">เวลามาตรฐาน UTC+7 และการนับวันจูเลียน</span>
+          </div>
+        </a>
+      </div>
+    </div>
+
+    <div class="drawer-footer">
+      <div class="footer-meta">
+        <span class="center-badge">ศูนย์ สอวน. โรงเรียนพรหมานุสรณ์จังหวัดเพชรบุรี</span>
+        <span class="ref-text">อ้างอิง: เอกสารประกอบการเรียนฉบับเต็ม ค่าย 1</span>
+      </div>
+    </div>
+  </aside>
+
+  <header class="app-header">
+    <button type="button" class="menu-toggle" id="menuToggle" aria-label="เปิด/ปิดเมนูนำทาง" title="เปิดเมนูบทเรียนจำลอง (Side Menu)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+    <svg class="logo" width="40" height="40" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+      <circle cx="22" cy="22" r="19" stroke="var(--color-accent)" stroke-width="2"/>
+      <polygon points="14,32 30,32 22,12" stroke="var(--color-blue)" stroke-width="2" fill="none"/>
+      <circle cx="22" cy="12" r="3" fill="#e86a6a"/>
+      <circle cx="14" cy="32" r="3" fill="#7dd6a8"/>
+      <circle cx="30" cy="32" r="3" fill="var(--color-accent)"/>
+    </svg>
+    <div class="title-block">
+      <h1>สามเหลี่ยมดาราศาสตร์ PZX</h1>
+      <p>เรขาคณิตทรงกลมและการคำนวณแปลงพิกัด (หัวใจข้อสอบ สอวน. ดาราศาสตร์)</p>
+    </div>
+    <button class="theme-toggle" data-theme-toggle aria-label="สลับโหมดสว่าง/มืด" title="สลับโหมดสี">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+  </header>
+
+  <!-- แถบสลับบทเรียนจำลองด่วน -->
+  <nav class="module-nav" aria-label="แถบเลือกบทเรียนจำลอง">
+    <a class="nav-tab" href="./index.html">
+      <span>🌐</span> ภาพรวมทรงกลมท้องฟ้า
+    </a>
+    <button type="button" class="nav-tab active" style="border:none; cursor:default;">
+      <span>📐</span> สามเหลี่ยมดาราศาสตร์ PZX
+    </button>
+    <button type="button" class="nav-tab btn-open-menu-chip" id="btnBrowseAllSims" style="border:none; cursor:pointer;">
+      <span>📚</span> สารบัญบทเรียน ▾
+    </button>
+  </nav>
+
+  <div class="layout">
+
+    <!-- ============ ฝั่งซ้าย: แผงควบคุมและสมการคำนวณ ============ -->
+    <aside class="panel">
+
+      <section class="card">
+        <h2><span class="num">1</span>กำหนดตัวแปรสามเหลี่ยม PZX</h2>
+
+        <div class="field">
+          <label for="pzxPreset">เลือกตัวอย่างพิกัดและตำแหน่งดาว</label>
+          <select id="pzxPreset">
+            <option value="ex">เชียงใหม่ (φ=18.5°, δ=+20.0°, HA=45.0°)</option>
+            <option value="p21">ตำแหน่ง A (φ=15.0°, δ=+15.0°, HA=30.0°)</option>
+            <option value="p22">ดาวเวกา (Vega: φ=15.0°, δ=+38.8°, HA=39.9°)</option>
+            <option value="p24">แปลงกลับขอบฟ้า (วัด h=45.0°, A=160.0° ที่ φ=13.0°)</option>
+            <option value="custom">— กำหนดค่าเองอิสระ —</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <div class="label-with-val">
+            <label for="pzxLat">ละติจูดผู้สังเกต φ (กำหนดด้าน PZ = 90° − φ)</label>
+            <span class="val-badge" id="valLat">18.5°</span>
+          </div>
+          <input type="range" id="pzxLat" min="-89" max="89" step="0.5" value="18.5">
+          <div class="hint-text">บวก = ซีกโลกเหนือ, ลบ = ซีกโลกใต้</div>
+        </div>
+
+        <div class="field">
+          <div class="label-with-val">
+            <label for="pzxDec">เดคลิเนชันของดาว δ (กำหนดด้าน PX = 90° − δ)</label>
+            <span class="val-badge" id="valDec">+20.0°</span>
+          </div>
+          <input type="range" id="pzxDec" min="-89" max="89" step="0.5" value="20.0">
+          <div class="hint-text">บวก = ฟ้าเหนือ (ใกล้ NCP), ลบ = ฟ้าใต้ (ใกล้ SCP)</div>
+        </div>
+
+        <div class="field">
+          <div class="label-with-val">
+            <label for="pzxHa">มุมชั่วโมง HA หรือ ∠P (องศา 0°–360°)</label>
+            <span class="val-badge" id="valHa">45.0° (03h 00m)</span>
+          </div>
+          <input type="range" id="pzxHa" min="0" max="360" step="1" value="45">
+          <div class="hint-text">0°–180° = ซีกฟ้าตะวันตก (กำลังตก), 180°–360° = ซีกฟ้าตะวันออก (เพิ่งขึ้น)</div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">2</span>องค์ประกอบด้านและมุมของสามเหลี่ยม</h2>
+
+        <div class="triangle-summary-table">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>องค์ประกอบ</th>
+                <th>สัญลักษณ์</th>
+                <th>ความหมายทางดาราศาสตร์</th>
+                <th>ขนาดมุม</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="row-side-pz">
+                <td><strong>ด้าน c</strong></td>
+                <td><code>PZ</code></td>
+                <td>โคละติจูด (Co-latitude: 90° − φ)</td>
+                <td id="sidePzVal">71.5°</td>
+              </tr>
+              <tr class="row-side-px">
+                <td><strong>ด้าน b</strong></td>
+                <td><code>PX</code></td>
+                <td>โคเดคลิเนชัน (North Polar Distance: 90° − δ)</td>
+                <td id="sidePxVal">70.0°</td>
+              </tr>
+              <tr class="row-side-zx">
+                <td><strong>ด้าน a</strong></td>
+                <td><code>ZX</code></td>
+                <td>ระยะจอมฟ้า (Zenith Distance: z = 90° − h)</td>
+                <td id="sideZxVal">42.4°</td>
+              </tr>
+              <tr class="row-angle-p">
+                <td><strong>มุม P</strong></td>
+                <td><code>∠P</code></td>
+                <td>มุมชั่วโมงของดาว (Hour Angle: HA)</td>
+                <td id="anglePVal">45.0°</td>
+              </tr>
+              <tr class="row-angle-z">
+                <td><strong>มุม Z</strong></td>
+                <td><code>∠Z</code></td>
+                <td>มุมที่จุดยอดฟ้า (วัดจากแนวเมริเดียน)</td>
+                <td id="angleZVal">80.3°</td>
+              </tr>
+              <tr class="row-angle-x">
+                <td><strong>มุม X</strong></td>
+                <td><code>∠X</code></td>
+                <td>Parallactic Angle (q)</td>
+                <td id="angleXVal">58.8°</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="result-grid" style="margin-top:14px">
+          <div class="result-box highlight-calc">
+            <div class="label">มุมเงยที่คำนวณได้ (h = 90° − ZX)</div>
+            <div class="value" id="calcAltOut">+47.6°</div>
+            <div class="sub" id="calcAltDmsOut">47° 36′ 00″</div>
+          </div>
+          <div class="result-box highlight-calc">
+            <div class="label">มุมทิศจริง (Azimuth, A)</div>
+            <div class="value" id="calcAzOut">279.7°</div>
+            <div class="sub" id="calcAzQuadOut">N 80.3° W (ตะวันตก)</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">3</span>การแทนค่ากฎตรีโกณมิติทรงกลมสด</h2>
+        <div class="math-derivation-box">
+          <div class="deriv-step">
+            <span class="step-badge">กฎโคไซน์สำหรับด้าน a (ZX)</span>
+            <div class="deriv-formula">
+              <code>cos(ZX) = cos(PZ)·cos(PX) + sin(PZ)·sin(PX)·cos P</code>
+            </div>
+            <div class="deriv-calc" id="derivStep1">
+              sin h = sin(18.5°)·sin(20.0°) + cos(18.5°)·cos(20.0°)·cos(45.0°)
+            </div>
+            <div class="deriv-calc-res" id="derivStep1Res">
+              sin h = 0.7386 &nbsp;⟹&nbsp; <strong>h = 47.6°</strong>
+            </div>
+          </div>
+
+          <div class="deriv-step" style="margin-top:12px">
+            <span class="step-badge">กฎโคไซน์สำหรับมุมทิศ Z (A)</span>
+            <div class="deriv-formula">
+              <code>cos A = (sin δ − sin φ·sin h) / (cos φ·cos h)</code>
+            </div>
+            <div class="deriv-calc" id="derivStep2">
+              cos A = (sin 20.0° − sin 18.5°·sin 47.6°) / (cos 18.5°·cos 47.6°)
+            </div>
+            <div class="deriv-calc-res" id="derivStep2Res">
+              cos A = 0.1684 &nbsp;⟹&nbsp; A₀ = 80.3° &nbsp;⟹&nbsp; <strong>A = 360° − 80.3° = 279.7°</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </aside>
+
+    <!-- ============ ฝั่งขวา: สามเหลี่ยมดาราศาสตร์ 3D บนทรงกลม ============ -->
+    <section class="sky-card" aria-label="สามเหลี่ยมดาราศาสตร์สามมิติ">
+      <div class="stage" id="stage"></div>
+
+      <!-- แถบปุ่มควบคุมการแสดงผลและโหมดมุมมอง -->
+      <div class="stage-toolbar">
+        <button type="button" class="tool-btn active-amber" id="toggleTriangleFill" aria-pressed="true">
+          <span>🔺</span> พื้นผิวสามเหลี่ยม PZX
+        </button>
+        <button type="button" class="tool-btn active-blue" id="toggleGreatCircles" aria-pressed="true">
+          <span>🌐</span> วงกลมใหญ่ต่อขยาย
+        </button>
+        <button type="button" class="tool-btn active-green" id="toggleHorizonGround" aria-pressed="true">
+          <span>🌍</span> ระนาบขอบฟ้า
+        </button>
+        <button type="button" class="tool-btn active" id="toggleSphereGrid" aria-pressed="true">
+          <span>🧭</span> โครงทรงกลมฟ้า
+        </button>
+        <button type="button" class="tool-btn active" id="togglePzxLabels" aria-pressed="true">
+          <span>🏷️</span> ป้ายกำกับด้านและมุม
+        </button>
+        <button type="button" class="tool-btn" id="btnPzxResetView" title="รีเซ็ตมุมมอง">
+          <span>🔄</span> รีเซ็ตมุมมอง
+        </button>
+      </div>
+
+      <div class="hint">ลากเพื่อหมุนสามมิติ · ซูมด้วยล้อเมาส์</div>
+      <div class="legend">
+        <span class="item"><span class="dot" style="background:#e86a6a"></span>จุด P (NCP ขั้วฟ้าเหนือ)</span>
+        <span class="item"><span class="dot" style="background:#7dd6a8"></span>จุด Z (Zenith จุดจอมฟ้า)</span>
+        <span class="item"><span class="dot" style="background:#f2c14e"></span>จุด X (Star ดาวเป้าหมาย)</span>
+        <span class="item"><span class="dot" style="background:#60a5fa"></span>ด้าน PZ (90° − φ)</span>
+        <span class="item"><span class="dot" style="background:#f59e0b"></span>ด้าน PX (90° − δ)</span>
+        <span class="item"><span class="dot" style="background:#34d399"></span>ด้าน ZX (90° − h = z)</span>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script type="module" src="./pzx-app.js"></script>
+</body>
+</html>
