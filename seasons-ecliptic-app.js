@@ -93,15 +93,20 @@ const dom = {
   resZodiac: document.getElementById("resZodiac"),
 
   btnResetView: document.getElementById("btnResetView"),
+  btnResetViewDesktop: document.getElementById("btnResetViewDesktop"),
   btnViewEcliptic: document.getElementById("btnViewEcliptic"),
   btnViewNCP: document.getElementById("btnViewNCP"),
   btnViewZenith: document.getElementById("btnViewZenith"),
 
+  btnToggleLayersMenu: document.getElementById("btnToggleLayersMenu"),
+  btnToggleLegendMenu: document.getElementById("btnToggleLegendMenu"),
+  stageToolbarLayers: document.getElementById("stageToolbarLayers"),
+  stageLegend: document.getElementById("stageLegend"),
+
   menuToggle: document.getElementById("menuToggle"),
   sideDrawer: document.getElementById("sideDrawer"),
   drawerBackdrop: document.getElementById("drawerBackdrop"),
-  drawerClose: document.getElementById("drawerClose"),
-  btnBrowseAllSims: document.getElementById("btnBrowseAllSims")
+  drawerClose: document.getElementById("drawerClose")
 };
 
 // ---------------- สถานะแบบจำลอง ----------------
@@ -306,23 +311,57 @@ sunGroup.add(sunGlowMesh);
 
 celestialGroup.add(sunGroup);
 
-// ป้ายข้อความ 3D แบบ Sprite
+const allSprites = [];
+
+function getSpriteScaleMultiplier() {
+  const w = window.innerWidth;
+  if (w <= 480) return 1.40;
+  if (w <= 768) return 1.25;
+  return 1.0;
+}
+
+// ป้ายข้อความ 3D แบบ Sprite (High-DPI Supersampling)
 function createTextSprite(text, color = "#ffffff", fontSize = 28) {
   const canvas = document.createElement("canvas");
-  canvas.width = 300;
-  canvas.height = 70;
   const ctx = canvas.getContext("2d");
-  ctx.font = `Bold ${fontSize}px 'IBM Plex Sans Thai', sans-serif`;
-  ctx.fillStyle = color;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(text, 150, 35);
+  const fs = Math.round(fontSize * 1.7);
+  ctx.font = `600 ${fs}px 'IBM Plex Sans Thai', sans-serif`;
+  const pad = 24;
+  canvas.width = Math.max(60, Math.ceil(ctx.measureText(text).width + pad * 2));
+  canvas.height = fs + pad;
+
+  const ctx2 = canvas.getContext("2d");
+  ctx2.font = `600 ${fs}px 'IBM Plex Sans Thai', sans-serif`;
+  ctx2.fillStyle = "rgba(8, 12, 28, 0.88)";
+  ctx2.beginPath();
+  if (ctx2.roundRect) ctx2.roundRect(0, 0, canvas.width, canvas.height, 14);
+  else ctx2.rect(0, 0, canvas.width, canvas.height);
+  ctx2.fill();
+
+  ctx2.lineWidth = 2.5;
+  ctx2.strokeStyle = "rgba(255, 255, 255, 0.22)";
+  ctx2.stroke();
+
+  ctx2.fillStyle = color;
+  ctx2.textAlign = "center";
+  ctx2.textBaseline = "middle";
+  ctx2.shadowColor = "rgba(0, 0, 0, 0.9)";
+  ctx2.shadowBlur = 6;
+  ctx2.fillText(text, canvas.width / 2, canvas.height / 2 + 1);
+  ctx2.shadowBlur = 0;
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.minFilter = THREE.LinearFilter;
-  const mat = new THREE.SpriteMaterial({ map: texture, transparent: true });
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
+  const mat = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
   const sprite = new THREE.Sprite(mat);
-  sprite.scale.set(30, 7, 1);
+  const aspect = canvas.width / canvas.height;
+  const baseH = (fontSize / 28) * 8.2;
+  const mult = getSpriteScaleMultiplier();
+  sprite.scale.set(baseH * aspect * mult, baseH * mult, 1);
+  sprite.userData = { baseH, aspect };
+  allSprites.push(sprite);
   return sprite;
 }
 
@@ -437,7 +476,15 @@ function fitCameraToViewport() {
   camera.updateProjectionMatrix();
   renderer.setSize(w, h);
   updateCameraPosition();
+
+  const mult = getSpriteScaleMultiplier();
+  allSprites.forEach(spr => {
+    if (spr.userData?.aspect && spr.userData?.baseH) {
+      spr.scale.set(spr.userData.baseH * spr.userData.aspect * mult, spr.userData.baseH * mult, 1);
+    }
+  });
 }
+
 
 const ro = new ResizeObserver(() => {
   fitCameraToViewport();
@@ -656,16 +703,18 @@ dom.btnPlayYearly.addEventListener("click", () => {
   dom.btnPlayYearly.classList.toggle("primary", state.isYearlyPlaying);
 });
 
-// ปุ่มรีเซ็ตมุมมองและมุมมองมาตรฐาน
-dom.btnResetView.addEventListener("click", () => {
+function doResetCamera() {
   camState.radius = 285;
   camState.theta = 45 * D2R;
   camState.phi = 65 * D2R;
   camState.target.set(0, 0, 0);
   updateCameraPosition();
-});
+}
 
-dom.btnViewEcliptic.addEventListener("click", () => {
+dom.btnResetView?.addEventListener("click", doResetCamera);
+dom.btnResetViewDesktop?.addEventListener("click", doResetCamera);
+
+dom.btnViewEcliptic?.addEventListener("click", () => {
   // มองจากขั้วสุริยวิถีเหนือ (NEP)
   camState.radius = 270;
   camState.theta = 0;
@@ -673,7 +722,7 @@ dom.btnViewEcliptic.addEventListener("click", () => {
   updateCameraPosition();
 });
 
-dom.btnViewNCP.addEventListener("click", () => {
+dom.btnViewNCP?.addEventListener("click", () => {
   // มองจากขั้วฟ้าเหนือ (NCP)
   camState.radius = 270;
   camState.theta = 0;
@@ -681,13 +730,62 @@ dom.btnViewNCP.addEventListener("click", () => {
   updateCameraPosition();
 });
 
-dom.btnViewZenith.addEventListener("click", () => {
+dom.btnViewZenith?.addEventListener("click", () => {
   // มองจากจุดจอมฟ้า (Zenith)
   camState.radius = 270;
   camState.theta = 0;
   camState.phi = 0.05;
   updateCameraPosition();
 });
+
+/* ---- ควบคุม Dropdown / Popover บนหน้าจอมือถือ ---- */
+function closeAllPopovers() {
+  dom.stageToolbarLayers?.classList.remove("open-popover");
+  dom.stageLegend?.classList.remove("open-popover");
+  if (dom.btnToggleLayersMenu) {
+    dom.btnToggleLayersMenu.classList.remove("active");
+    dom.btnToggleLayersMenu.setAttribute("aria-expanded", "false");
+  }
+  if (dom.btnToggleLegendMenu) {
+    dom.btnToggleLegendMenu.classList.remove("active");
+    dom.btnToggleLegendMenu.setAttribute("aria-expanded", "false");
+  }
+}
+
+if (dom.btnToggleLayersMenu && dom.stageToolbarLayers) {
+  dom.btnToggleLayersMenu.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isOpen = dom.stageToolbarLayers.classList.contains("open-popover");
+    closeAllPopovers();
+    if (!isOpen) {
+      dom.stageToolbarLayers.classList.add("open-popover");
+      dom.btnToggleLayersMenu.classList.add("active");
+      dom.btnToggleLayersMenu.setAttribute("aria-expanded", "true");
+    }
+  });
+}
+
+if (dom.btnToggleLegendMenu && dom.stageLegend) {
+  dom.btnToggleLegendMenu.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isOpen = dom.stageLegend.classList.contains("open-popover");
+    closeAllPopovers();
+    if (!isOpen) {
+      dom.stageLegend.classList.add("open-popover");
+      dom.btnToggleLegendMenu.classList.add("active");
+      dom.btnToggleLegendMenu.setAttribute("aria-expanded", "true");
+    }
+  });
+}
+
+document.addEventListener("click", (e) => {
+  if (!e.target.closest("#stageToolbarLayers") && !e.target.closest("#stageLegend") &&
+      !e.target.closest(".mobile-control-bar")) {
+    closeAllPopovers();
+  }
+});
+
+
 
 // Drawer Navigation และ Theme Toggle
 function openDrawer() {
@@ -704,7 +802,6 @@ function closeDrawer() {
 dom.menuToggle?.addEventListener("click", openDrawer);
 dom.drawerClose?.addEventListener("click", closeDrawer);
 dom.drawerBackdrop?.addEventListener("click", closeDrawer);
-dom.btnBrowseAllSims?.addEventListener("click", openDrawer);
 
 window.addEventListener("keydown", (e) => {
   if (e.key === "Escape") closeDrawer();

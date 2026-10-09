@@ -158,19 +158,6 @@
     </button>
   </header>
 
-  <!-- แถบสลับบทเรียนจำลองด่วน -->
-  <nav class="module-nav" aria-label="แถบเลือกบทเรียนจำลอง">
-    <a class="nav-tab" href="./index.html">
-      <span>🌐</span> ภาพรวมทรงกลมท้องฟ้า
-    </a>
-    <button type="button" class="nav-tab active" style="border:none; cursor:default;">
-      <span>📐</span> สามเหลี่ยมดาราศาสตร์ PZX
-    </button>
-    <button type="button" class="nav-tab btn-open-menu-chip" id="btnBrowseAllSims" style="border:none; cursor:pointer;">
-      <span>📚</span> สารบัญบทเรียน ▾
-    </button>
-  </nav>
-
   <div class="layout">
 
     <!-- ============ ฝั่งซ้าย: แผงควบคุมและสมการคำนวณ ============ -->
@@ -322,37 +309,52 @@
     <!-- ============ ฝั่งขวา: สามเหลี่ยมดาราศาสตร์ 3D บนทรงกลม ============ -->
     <section class="sky-card" aria-label="สามเหลี่ยมดาราศาสตร์สามมิติ">
       <div class="stage" id="stage"></div>
-
-      <!-- แถบปุ่มควบคุมการแสดงผลและโหมดมุมมอง -->
-      <div class="stage-toolbar">
-        <button type="button" class="tool-btn active-amber" id="toggleTriangleFill" aria-pressed="true">
-          <span>🔺</span> พื้นผิวสามเหลี่ยม PZX
-        </button>
-        <button type="button" class="tool-btn active-blue" id="toggleGreatCircles" aria-pressed="true">
-          <span>🌐</span> วงกลมใหญ่ต่อขยาย
-        </button>
-        <button type="button" class="tool-btn active-green" id="toggleHorizonGround" aria-pressed="true">
-          <span>🌍</span> ระนาบขอบฟ้า
-        </button>
-        <button type="button" class="tool-btn active" id="toggleSphereGrid" aria-pressed="true">
-          <span>🧭</span> โครงทรงกลมฟ้า
-        </button>
-        <button type="button" class="tool-btn active" id="togglePzxLabels" aria-pressed="true">
-          <span>🏷️</span> ป้ายกำกับด้านและมุม
-        </button>
-        <button type="button" class="tool-btn" id="btnPzxResetView" title="รีเซ็ตมุมมอง">
-          <span>🔄</span> รีเซ็ตมุมมอง
-        </button>
-      </div>
-
       <div class="hint">ลากเพื่อหมุนสามมิติ · ซูมด้วยล้อเมาส์</div>
-      <div class="legend">
-        <span class="item"><span class="dot" style="background:#e86a6a"></span>จุด P (NCP ขั้วฟ้าเหนือ)</span>
-        <span class="item"><span class="dot" style="background:#7dd6a8"></span>จุด Z (Zenith จุดจอมฟ้า)</span>
-        <span class="item"><span class="dot" style="background:#f2c14e"></span>จุด X (Star ดาวเป้าหมาย)</span>
-        <span class="item"><span class="dot" style="background:#60a5fa"></span>ด้าน PZ (90° − φ)</span>
-        <span class="item"><span class="dot" style="background:#f59e0b"></span>ด้าน PX (90° − δ)</span>
-        <span class="item"><span class="dot" style="background:#34d399"></span>ด้าน ZX (90° − h = z)</span>
+
+      <div class="sky-controls-wrap">
+        <!-- แถบปุ่มลัดบนมือถือ (แสดงเฉพาะหน้าจอ <= 768px) -->
+        <div class="mobile-control-bar">
+          <button type="button" class="mobile-dropdown-btn" id="btnToggleLayersMenu" aria-expanded="false" title="เลือกแสดง/ซ่อนองค์ประกอบ">
+            <span>⚙️</span> เลเยอร์ ▾
+          </button>
+          <button type="button" class="mobile-dropdown-btn" id="btnToggleLegendMenu" aria-expanded="false" title="ดูความหมายสัญลักษณ์สี">
+            <span>ℹ️</span> สัญลักษณ์สี ▾
+          </button>
+          <button type="button" class="tool-btn mobile-quick-btn" id="btnPzxResetView" title="รีเซ็ตมุมมอง">
+            <span>🔄</span> รีเซ็ต
+          </button>
+        </div>
+
+        <!-- แถบปุ่มควบคุมการแสดงผลและโหมดมุมมอง -->
+        <div class="stage-toolbar" id="stageToolbarLayers">
+          <button type="button" class="tool-btn active-amber" id="toggleTriangleFill" aria-pressed="true">
+            <span>🔺</span> พื้นผิวสามเหลี่ยม PZX
+          </button>
+          <button type="button" class="tool-btn active-blue" id="toggleGreatCircles" aria-pressed="true">
+            <span>🌐</span> วงกลมใหญ่ต่อขยาย
+          </button>
+          <button type="button" class="tool-btn active-green" id="toggleHorizonGround" aria-pressed="true">
+            <span>🌍</span> ระนาบขอบฟ้า
+          </button>
+          <button type="button" class="tool-btn active" id="toggleSphereGrid" aria-pressed="true">
+            <span>🧭</span> โครงทรงกลมฟ้า
+          </button>
+          <button type="button" class="tool-btn active" id="togglePzxLabels" aria-pressed="true">
+            <span>🏷️</span> ป้ายกำกับด้านและมุม
+          </button>
+          <button type="button" class="tool-btn" id="btnPzxResetViewDesktop" title="รีเซ็ตมุมมอง">
+            <span>🔄</span> รีเซ็ตมุมมอง
+          </button>
+        </div>
+
+        <div class="legend" id="stageLegend">
+          <span class="item"><span class="dot" style="background:#e86a6a"></span>จุด P (NCP ขั้วฟ้าเหนือ)</span>
+          <span class="item"><span class="dot" style="background:#7dd6a8"></span>จุด Z (Zenith จุดจอมฟ้า)</span>
+          <span class="item"><span class="dot" style="background:#f2c14e"></span>จุด X (Star ดาวเป้าหมาย)</span>
+          <span class="item"><span class="dot" style="background:#60a5fa"></span>ด้าน PZ (90° − φ)</span>
+          <span class="item"><span class="dot" style="background:#f59e0b"></span>ด้าน PX (90° − δ)</span>
+          <span class="item"><span class="dot" style="background:#34d399"></span>ด้าน ZX (90° − h = z)</span>
+        </div>
       </div>
     </section>
 

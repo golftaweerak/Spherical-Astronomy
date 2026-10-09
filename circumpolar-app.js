@@ -567,20 +567,77 @@ if (toggleLabelsBtn) {
   });
 }
 
+function doResetCameraView() {
+  camState.theta = DEFAULT_CAM.theta;
+  camState.phi = DEFAULT_CAM.phi;
+  camState.radius = DEFAULT_CAM.radius;
+  applyCamera();
+}
+
 if (btnResetView) {
-  btnResetView.addEventListener('click', () => {
-    camState.theta = DEFAULT_CAM.theta;
-    camState.phi = DEFAULT_CAM.phi;
-    camState.radius = DEFAULT_CAM.radius;
-    applyCamera();
+  btnResetView.addEventListener('click', doResetCameraView);
+}
+const btnResetViewDesktop = $('btnResetViewDesktop');
+if (btnResetViewDesktop) {
+  btnResetViewDesktop.addEventListener('click', doResetCameraView);
+}
+
+/* ---- ควบคุม Dropdown / Popover บนหน้าจอมือถือ (แสดง/ซ่อนองค์ประกอบ และ สัญลักษณ์สี) ---- */
+const btnToggleLayersMenu = $('btnToggleLayersMenu');
+const btnToggleLegendMenu = $('btnToggleLegendMenu');
+const stageToolbarLayers = $('stageToolbarLayers');
+const stageLegend = $('stageLegend');
+
+function closeAllPopovers() {
+  if (stageToolbarLayers) stageToolbarLayers.classList.remove('open-popover');
+  if (stageLegend) stageLegend.classList.remove('open-popover');
+  if (btnToggleLayersMenu) {
+    btnToggleLayersMenu.classList.remove('active');
+    btnToggleLayersMenu.setAttribute('aria-expanded', 'false');
+  }
+  if (btnToggleLegendMenu) {
+    btnToggleLegendMenu.classList.remove('active');
+    btnToggleLegendMenu.setAttribute('aria-expanded', 'false');
+  }
+}
+
+if (btnToggleLayersMenu && stageToolbarLayers) {
+  btnToggleLayersMenu.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = stageToolbarLayers.classList.contains('open-popover');
+    closeAllPopovers();
+    if (!isOpen) {
+      stageToolbarLayers.classList.add('open-popover');
+      btnToggleLayersMenu.classList.add('active');
+      btnToggleLayersMenu.setAttribute('aria-expanded', 'true');
+    }
   });
 }
+
+if (btnToggleLegendMenu && stageLegend) {
+  btnToggleLegendMenu.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = stageLegend.classList.contains('open-popover');
+    closeAllPopovers();
+    if (!isOpen) {
+      stageLegend.classList.add('open-popover');
+      btnToggleLegendMenu.classList.add('active');
+      btnToggleLegendMenu.setAttribute('aria-expanded', 'true');
+    }
+  });
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#stageToolbarLayers') && !e.target.closest('#stageLegend') &&
+      !e.target.closest('.mobile-control-bar')) {
+    closeAllPopovers();
+  }
+});
 
 // ควบคุมเมนูลิ้นชักด้านข้าง (YouTube-Style Side Drawer)
 const menuToggle = $('menuToggle');
 const drawerClose = $('drawerClose');
 const drawerBackdrop = $('drawerBackdrop');
-const btnBrowseAllSims = $('btnBrowseAllSims');
 
 function openDrawer() { document.body.classList.add('drawer-open'); }
 function closeDrawer() { document.body.classList.remove('drawer-open'); }
@@ -588,7 +645,6 @@ function closeDrawer() { document.body.classList.remove('drawer-open'); }
 if (menuToggle) menuToggle.addEventListener('click', openDrawer);
 if (drawerClose) drawerClose.addEventListener('click', closeDrawer);
 if (drawerBackdrop) drawerBackdrop.addEventListener('click', closeDrawer);
-if (btnBrowseAllSims) btnBrowseAllSims.addEventListener('click', openDrawer);
 
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && document.body.classList.contains('drawer-open')) {

@@ -54,17 +54,23 @@ const dom = {
   btnStepMinusDay: document.getElementById("btnStepMinusDay"),
   btnStepMinusHour: document.getElementById("btnStepMinusHour"),
   btnToggleLiveClock: document.getElementById("btnToggleLiveClock"),
+  btnToggleLiveClockDesktop: document.getElementById("btnToggleLiveClockDesktop"),
   liveIcon: document.getElementById("liveIcon"),
+  liveIconDesktop: document.getElementById("liveIconDesktop"),
   btnStepPlusHour: document.getElementById("btnStepPlusHour"),
   btnStepPlusDay: document.getElementById("btnStepPlusDay"),
+
+  btnToggleLayersMenu: document.getElementById("btnToggleLayersMenu"),
+  btnToggleLegendMenu: document.getElementById("btnToggleLegendMenu"),
+  stageToolbarLayers: document.getElementById("stageToolbarLayers"),
+  stageLegend: document.getElementById("stageLegend"),
 
   clockCanvas: document.getElementById("clockCanvas"),
 
   menuToggle: document.getElementById("menuToggle"),
   sideDrawer: document.getElementById("sideDrawer"),
   drawerBackdrop: document.getElementById("drawerBackdrop"),
-  drawerClose: document.getElementById("drawerClose"),
-  btnBrowseAllSims: document.getElementById("btnBrowseAllSims")
+  drawerClose: document.getElementById("drawerClose")
 };
 
 // ---------------- สถานะแบบจำลอง ----------------
@@ -413,10 +419,63 @@ dom.btnStepPlusHour.addEventListener("click", () => {
   updateSimulation();
 });
 
-dom.btnToggleLiveClock.addEventListener("click", () => {
+function toggleLiveClock() {
   state.isLiveClock = !state.isLiveClock;
-  dom.liveIcon.textContent = state.isLiveClock ? "⏸" : "⏱️";
-  dom.btnToggleLiveClock.classList.toggle("primary", !state.isLiveClock);
+  const icon = state.isLiveClock ? "⏸" : "⏱️";
+  if (dom.liveIcon) dom.liveIcon.textContent = icon;
+  if (dom.liveIconDesktop) dom.liveIconDesktop.textContent = icon;
+  if (dom.btnToggleLiveClock) dom.btnToggleLiveClock.classList.toggle("primary", !state.isLiveClock);
+  if (dom.btnToggleLiveClockDesktop) dom.btnToggleLiveClockDesktop.classList.toggle("primary", !state.isLiveClock);
+}
+
+dom.btnToggleLiveClock?.addEventListener("click", toggleLiveClock);
+dom.btnToggleLiveClockDesktop?.addEventListener("click", toggleLiveClock);
+
+/* ---- ควบคุม Dropdown / Popover บนหน้าจอมือถือ ---- */
+function closeAllPopovers() {
+  dom.stageToolbarLayers?.classList.remove("open-popover");
+  dom.stageLegend?.classList.remove("open-popover");
+  if (dom.btnToggleLayersMenu) {
+    dom.btnToggleLayersMenu.classList.remove("active");
+    dom.btnToggleLayersMenu.setAttribute("aria-expanded", "false");
+  }
+  if (dom.btnToggleLegendMenu) {
+    dom.btnToggleLegendMenu.classList.remove("active");
+    dom.btnToggleLegendMenu.setAttribute("aria-expanded", "false");
+  }
+}
+
+if (dom.btnToggleLayersMenu && dom.stageToolbarLayers) {
+  dom.btnToggleLayersMenu.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isOpen = dom.stageToolbarLayers.classList.contains("open-popover");
+    closeAllPopovers();
+    if (!isOpen) {
+      dom.stageToolbarLayers.classList.add("open-popover");
+      dom.btnToggleLayersMenu.classList.add("active");
+      dom.btnToggleLayersMenu.setAttribute("aria-expanded", "true");
+    }
+  });
+}
+
+if (dom.btnToggleLegendMenu && dom.stageLegend) {
+  dom.btnToggleLegendMenu.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isOpen = dom.stageLegend.classList.contains("open-popover");
+    closeAllPopovers();
+    if (!isOpen) {
+      dom.stageLegend.classList.add("open-popover");
+      dom.btnToggleLegendMenu.classList.add("active");
+      dom.btnToggleLegendMenu.setAttribute("aria-expanded", "true");
+    }
+  });
+}
+
+document.addEventListener("click", (e) => {
+  if (!e.target.closest("#stageToolbarLayers") && !e.target.closest("#stageLegend") &&
+      !e.target.closest(".mobile-control-bar")) {
+    closeAllPopovers();
+  }
 });
 
 // Drawer Navigation
@@ -434,7 +493,6 @@ function closeDrawer() {
 dom.menuToggle?.addEventListener("click", openDrawer);
 dom.drawerClose?.addEventListener("click", closeDrawer);
 dom.drawerBackdrop?.addEventListener("click", closeDrawer);
-dom.btnBrowseAllSims?.addEventListener("click", openDrawer);
 
 window.addEventListener("keydown", (e) => {
   if (e.key === "Escape") closeDrawer();

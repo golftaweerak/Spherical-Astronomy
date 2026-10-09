@@ -1032,6 +1032,7 @@ const toggleLabelsBtn = $('toggleLabels');
 const toggleGridBtn = $('toggleGrid');
 const toolBtnPlay = $('toolBtnPlay');
 const btnResetView = $('btnResetView');
+const btnResetViewDesktop = $('btnResetViewDesktop');
 
 // ปุ่มเดินเวลาและการจำลองเวลา
 const btnPlayPause = $('btnPlayPause');
@@ -1165,13 +1166,18 @@ if (toggleGridBtn) {
   });
 }
 
+function doResetCameraView() {
+  camState.theta = DEFAULT_CAM.theta;
+  camState.phi = DEFAULT_CAM.phi;
+  camState.radius = DEFAULT_CAM.radius;
+  applyCamera();
+}
+
 if (btnResetView) {
-  btnResetView.addEventListener('click', () => {
-    camState.theta = DEFAULT_CAM.theta;
-    camState.phi = DEFAULT_CAM.phi;
-    camState.radius = DEFAULT_CAM.radius;
-    applyCamera();
-  });
+  btnResetView.addEventListener('click', doResetCameraView);
+}
+if (btnResetViewDesktop) {
+  btnResetViewDesktop.addEventListener('click', doResetCameraView);
 }
 
 /* ---- ควบคุม Dropdown / Popover บนหน้าจอมือถือ (แสดง/ซ่อนองค์ประกอบ และ สัญลักษณ์สี) ---- */

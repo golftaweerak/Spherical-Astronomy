@@ -150,25 +150,6 @@
     </button>
   </header>
 
-  <!-- แถบนำทางด่วน -->
-  <nav class="module-nav" aria-label="แถบเลือกบทเรียนจำลอง">
-    <a class="nav-tab" href="./index.html">
-      <span>🌐</span> ทรงกลมท้องฟ้า
-    </a>
-    <a class="nav-tab" href="./seasons-ecliptic.html">
-      <span>☀️</span> สุริยวิถี 4 ฤดูกาล
-    </a>
-    <a class="nav-tab" href="./pzx-triangle.html">
-      <span>📐</span> สามเหลี่ยม PZX
-    </a>
-    <button type="button" class="nav-tab active" style="border:none; cursor:default;">
-      <span>⏱️</span> วันดาราคติ vs สุริยคติ
-    </button>
-    <button type="button" class="nav-tab btn-open-menu-chip" id="btnBrowseAllSims" style="border:none; cursor:pointer;">
-      <span>📚</span> สารบัญบทเรียน ▾
-    </button>
-  </nav>
-
   <div class="layout">
 
     <!-- ============ ฝั่งซ้าย: แผงควบคุม ============ -->
@@ -273,27 +254,42 @@
     <!-- ============ ฝั่งขวา: ทรงกลมท้องฟ้า 3D ============ -->
     <section class="sky-card" aria-label="วันดาราคติและวันสุริยคติ">
       <div class="stage" id="stage"></div>
-
-      <!-- แถบเครื่องมือมุมมองกล้องด้านล่างจอ -->
-      <div class="stage-toolbar">
-        <button type="button" class="tool-btn" id="btnResetView" title="รีเซ็ตมุมมอง">
-          <span>🔄</span> รีเซ็ตมุมมองด้านบน
-        </button>
-        <button type="button" class="tool-btn" id="btnViewEarthFollow" title="มองใกล้โลก">
-          <span>🌍</span> มุมมองตามโลก (Follow Earth)
-        </button>
-        <button type="button" class="tool-btn" id="btnViewPerspective" title="มุมมอง 3 มิติเฉียง">
-          <span>📐</span> มุมมองสามมิติ (Perspective)
-        </button>
-      </div>
-
       <div class="hint">ลากเพื่อหมุนสามมิติ · ซูมด้วยล้อเมาส์</div>
-      <div class="legend">
-        <span class="item"><span class="dot" style="background:#ffd166"></span>ดวงอาทิตย์ (Sun)</span>
-        <span class="item"><span class="dot" style="background:#4fa3e3"></span>โลก (Earth)</span>
-        <span class="item"><span class="dot" style="background:#ff4d6d"></span>ผู้สังเกต (Observer Local Meridian)</span>
-        <span class="item"><span class="dot" style="background:#7dd6a8"></span>แนวเล็งดาวฤกษ์ไกล (360°)</span>
-        <span class="item"><span class="dot" style="background:#ffd166"></span>แนวเล็งดวงอาทิตย์</span>
+
+      <div class="sky-controls-wrap">
+        <!-- แถบปุ่มลัดบนมือถือ (แสดงเฉพาะหน้าจอ <= 768px) -->
+        <div class="mobile-control-bar">
+          <button type="button" class="mobile-dropdown-btn" id="btnToggleLayersMenu" aria-expanded="false" title="เลือกมุมมองกล้อง">
+            <span>👁️</span> มุมมอง ▾
+          </button>
+          <button type="button" class="mobile-dropdown-btn" id="btnToggleLegendMenu" aria-expanded="false" title="ดูความหมายสัญลักษณ์สี">
+            <span>ℹ️</span> สัญลักษณ์สี ▾
+          </button>
+          <button type="button" class="tool-btn mobile-quick-btn" id="btnResetView" title="รีเซ็ตมุมมอง">
+            <span>🔄</span> รีเซ็ต
+          </button>
+        </div>
+
+        <!-- แถบเครื่องมือมุมมองกล้องด้านล่างจอ -->
+        <div class="stage-toolbar" id="stageToolbarLayers">
+          <button type="button" class="tool-btn" id="btnResetViewDesktop" title="รีเซ็ตมุมมอง">
+            <span>🔄</span> รีเซ็ตมุมมองด้านบน
+          </button>
+          <button type="button" class="tool-btn" id="btnViewEarthFollow" title="มองใกล้โลก">
+            <span>🌍</span> มุมมองตามโลก (Follow Earth)
+          </button>
+          <button type="button" class="tool-btn" id="btnViewPerspective" title="มุมมอง 3 มิติเฉียง">
+            <span>📐</span> มุมมองสามมิติ (Perspective)
+          </button>
+        </div>
+
+        <div class="legend" id="stageLegend">
+          <span class="item"><span class="dot" style="background:#ffd166"></span>ดวงอาทิตย์ (Sun)</span>
+          <span class="item"><span class="dot" style="background:#4fa3e3"></span>โลก (Earth)</span>
+          <span class="item"><span class="dot" style="background:#ff4d6d"></span>ผู้สังเกต (Observer Local Meridian)</span>
+          <span class="item"><span class="dot" style="background:#7dd6a8"></span>แนวเล็งดาวฤกษ์ไกล (360°)</span>
+          <span class="item"><span class="dot" style="background:#ffd166"></span>แนวเล็งดวงอาทิตย์</span>
+        </div>
       </div>
     </section>
 

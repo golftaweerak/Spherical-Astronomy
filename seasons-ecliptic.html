@@ -149,25 +149,6 @@
     </button>
   </header>
 
-  <!-- แถบนำทางด่วน -->
-  <nav class="module-nav" aria-label="แถบเลือกบทเรียนจำลอง">
-    <a class="nav-tab" href="./index.html">
-      <span>🌐</span> ทรงกลมท้องฟ้า
-    </a>
-    <a class="nav-tab" href="./circumpolar.html">
-      <span>🔄</span> ดาวรอบขั้ว
-    </a>
-    <button type="button" class="nav-tab active" style="border:none; cursor:default;">
-      <span>☀️</span> สุริยวิถี 4 ฤดูกาล
-    </button>
-    <a class="nav-tab" href="./pzx-triangle.html">
-      <span>📐</span> สามเหลี่ยม PZX
-    </a>
-    <button type="button" class="nav-tab btn-open-menu-chip" id="btnBrowseAllSims" style="border:none; cursor:pointer;">
-      <span>📚</span> สารบัญบทเรียน ▾
-    </button>
-  </nav>
-
   <div class="layout">
 
     <!-- ============ ฝั่งซ้าย: แผงควบคุม ============ -->
@@ -305,31 +286,46 @@
     <!-- ============ ฝั่งขวา: ทรงกลมท้องฟ้า 3D ============ -->
     <section class="sky-card" aria-label="สุริยวิถี 4 ฤดูกาลและกลุ่มดาวจักราศี">
       <div class="stage" id="stage"></div>
-
-      <!-- แถบเครื่องมือควบคุมมุมมองด้านล่างจอ -->
-      <div class="stage-toolbar">
-        <button type="button" class="tool-btn" id="btnResetView" title="รีเซ็ตมุมมองกล้อง 3 มิติ">
-          <span>🔄</span> รีเซ็ตมุมมอง
-        </button>
-        <button type="button" class="tool-btn" id="btnViewEcliptic" title="มองตั้งฉากระนาบสุริยวิถี">
-          <span>☀️</span> ขั้วสุริยวิถี (NEP)
-        </button>
-        <button type="button" class="tool-btn" id="btnViewNCP" title="มองตั้งฉากขั้วฟ้าเหนือ">
-          <span>⭐</span> ขั้วฟ้าเหนือ (NCP)
-        </button>
-        <button type="button" class="tool-btn" id="btnViewZenith" title="มองจากจุดจอมฟ้า">
-          <span>👁️</span> จุดจอมฟ้า (Zenith)
-        </button>
-      </div>
-
       <div class="hint">ลากเพื่อหมุนสามมิติ · ซูมด้วยล้อเมาส์</div>
-      <div class="legend">
-        <span class="item"><span class="dot" style="background:#f6c445"></span>ระนาบสุริยวิถี (Ecliptic ε=23.44°)</span>
-        <span class="item"><span class="dot" style="background:#4fa3e3"></span>ศูนย์สูตรฟ้า (Equator δ=0°)</span>
-        <span class="item"><span class="dot" style="background:#52b788"></span>ระนาบขอบฟ้า (Horizon h=0°)</span>
-        <span class="item"><span class="dot" style="background:#8ecae6"></span>เส้นรอบวงเมริเดียน (Meridian)</span>
-        <span class="item"><span class="dot" style="background:#ff8c42"></span>ทางเดินประจำวัน (Diurnal Path)</span>
-        <span class="item"><span class="dot" style="background:#ffd166"></span>ดวงอาทิตย์ (Sun)</span>
+
+      <div class="sky-controls-wrap">
+        <!-- แถบปุ่มลัดบนมือถือ (แสดงเฉพาะหน้าจอ <= 768px) -->
+        <div class="mobile-control-bar">
+          <button type="button" class="mobile-dropdown-btn" id="btnToggleLayersMenu" aria-expanded="false" title="เลือกมุมมองตั้งฉาก">
+            <span>👁️</span> มุมมองตั้งฉาก ▾
+          </button>
+          <button type="button" class="mobile-dropdown-btn" id="btnToggleLegendMenu" aria-expanded="false" title="ดูความหมายสัญลักษณ์สี">
+            <span>ℹ️</span> สัญลักษณ์สี ▾
+          </button>
+          <button type="button" class="tool-btn mobile-quick-btn" id="btnResetView" title="รีเซ็ตมุมมอง">
+            <span>🔄</span> รีเซ็ต
+          </button>
+        </div>
+
+        <!-- แถบเครื่องมือควบคุมมุมมองด้านล่างจอ -->
+        <div class="stage-toolbar" id="stageToolbarLayers">
+          <button type="button" class="tool-btn" id="btnResetViewDesktop" title="รีเซ็ตมุมมองกล้อง 3 มิติ">
+            <span>🔄</span> รีเซ็ตมุมมอง
+          </button>
+          <button type="button" class="tool-btn" id="btnViewEcliptic" title="มองตั้งฉากระนาบสุริยวิถี">
+            <span>☀️</span> ขั้วสุริยวิถี (NEP)
+          </button>
+          <button type="button" class="tool-btn" id="btnViewNCP" title="มองตั้งฉากขั้วฟ้าเหนือ">
+            <span>⭐</span> ขั้วฟ้าเหนือ (NCP)
+          </button>
+          <button type="button" class="tool-btn" id="btnViewZenith" title="มองจากจุดจอมฟ้า">
+            <span>👁️</span> จุดจอมฟ้า (Zenith)
+          </button>
+        </div>
+
+        <div class="legend" id="stageLegend">
+          <span class="item"><span class="dot" style="background:#f6c445"></span>ระนาบสุริยวิถี (Ecliptic ε=23.44°)</span>
+          <span class="item"><span class="dot" style="background:#4fa3e3"></span>ศูนย์สูตรฟ้า (Equator δ=0°)</span>
+          <span class="item"><span class="dot" style="background:#52b788"></span>ระนาบขอบฟ้า (Horizon h=0°)</span>
+          <span class="item"><span class="dot" style="background:#8ecae6"></span>เส้นรอบวงเมริเดียน (Meridian)</span>
+          <span class="item"><span class="dot" style="background:#ff8c42"></span>ทางเดินประจำวัน (Diurnal Path)</span>
+          <span class="item"><span class="dot" style="background:#ffd166"></span>ดวงอาทิตย์ (Sun)</span>
+        </div>
       </div>
     </section>
 

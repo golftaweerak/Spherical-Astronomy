@@ -149,25 +149,6 @@
     </button>
   </header>
 
-  <!-- แถบนำทางด่วน -->
-  <nav class="module-nav" aria-label="แถบเลือกบทเรียนจำลอง">
-    <a class="nav-tab" href="./index.html">
-      <span>🌐</span> ทรงกลมท้องฟ้า
-    </a>
-    <a class="nav-tab" href="./circumpolar.html">
-      <span>🔄</span> ดาวรอบขั้ว
-    </a>
-    <a class="nav-tab" href="./pzx-triangle.html">
-      <span>📐</span> สามเหลี่ยม PZX
-    </a>
-    <button type="button" class="nav-tab active" style="border:none; cursor:default;">
-      <span>🌅</span> สภาวะขึ้น-ตก & สนธยา
-    </button>
-    <button type="button" class="nav-tab btn-open-menu-chip" id="btnBrowseAllSims" style="border:none; cursor:pointer;">
-      <span>📚</span> สารบัญบทเรียน ▾
-    </button>
-  </nav>
-
   <div class="layout">
 
     <!-- ============ ฝั่งซ้าย: แผงควบคุม ============ -->
@@ -326,33 +307,48 @@
     <!-- ============ ฝั่งขวา: ทรงกลมท้องฟ้า 3D ============ -->
     <section class="sky-card" aria-label="สภาวะขึ้นตกและแสงสนธยา">
       <div class="stage" id="stage"></div>
-
-      <!-- แถบเครื่องมือมุมมองกล้องด้านล่างจอ -->
-      <div class="stage-toolbar">
-        <button type="button" class="tool-btn" id="btnResetView" title="รีเซ็ตมุมมอง">
-          <span>🔄</span> รีเซ็ตมุมมอง
-        </button>
-        <button type="button" class="tool-btn" id="btnViewEast" title="มองจากทิศตะวันออก">
-          <span>🌅</span> จุดขอบฟ้าตะวันออก (E)
-        </button>
-        <button type="button" class="tool-btn" id="btnViewMeridian" title="มองตั้งฉากเมริเดียน">
-          <span>🧭</span> ระนาบเมริเดียน
-        </button>
-        <button type="button" class="tool-btn" id="btnViewZenith" title="มองจากจุดจอมฟ้า">
-          <span>👁️</span> จุดจอมฟ้า (Zenith)
-        </button>
-      </div>
-
       <div class="hint">ลากเพื่อหมุนสามมิติ · ซูมด้วยล้อเมาส์</div>
-      <div class="legend">
-        <span class="item"><span class="dot" style="background:#52b788"></span>ขอบฟ้า (Horizon h=0°)</span>
-        <span class="item"><span class="dot" style="background:#8ecae6"></span>เส้นรอบวงเมริเดียน (Meridian)</span>
-        <span class="item"><span class="dot" style="background:#ff8c42"></span>ทางเดินประจำวัน (Diurnal Path)</span>
-        <span class="item"><span class="dot" style="background:#48cae4"></span>เส้นมุมชั่วโมง (Hour Angle H)</span>
-        <span class="item"><span class="dot" style="background:#e76f51"></span>สนธยาแพ่ง (−6°)</span>
-        <span class="item"><span class="dot" style="background:#457b9d"></span>เดินเรือ (−12°)</span>
-        <span class="item"><span class="dot" style="background:#1d3557"></span>ดาราศาสตร์ (−18°)</span>
-        <span class="item"><span class="dot" style="background:#ffd166"></span>จุดขึ้น/ตก (Rise/Set)</span>
+
+      <div class="sky-controls-wrap">
+        <!-- แถบปุ่มลัดบนมือถือ (แสดงเฉพาะหน้าจอ <= 768px) -->
+        <div class="mobile-control-bar">
+          <button type="button" class="mobile-dropdown-btn" id="btnToggleLayersMenu" aria-expanded="false" title="เลือกมุมมองกล้อง">
+            <span>👁️</span> มุมมองกล้อง ▾
+          </button>
+          <button type="button" class="mobile-dropdown-btn" id="btnToggleLegendMenu" aria-expanded="false" title="ดูความหมายสัญลักษณ์สี">
+            <span>ℹ️</span> สัญลักษณ์สี ▾
+          </button>
+          <button type="button" class="tool-btn mobile-quick-btn" id="btnResetView" title="รีเซ็ตมุมมอง">
+            <span>🔄</span> รีเซ็ต
+          </button>
+        </div>
+
+        <!-- แถบเครื่องมือมุมมองกล้องด้านล่างจอ -->
+        <div class="stage-toolbar" id="stageToolbarLayers">
+          <button type="button" class="tool-btn" id="btnResetViewDesktop" title="รีเซ็ตมุมมอง">
+            <span>🔄</span> รีเซ็ตมุมมอง
+          </button>
+          <button type="button" class="tool-btn" id="btnViewEast" title="มองจากทิศตะวันออก">
+            <span>🌅</span> จุดขอบฟ้าตะวันออก (E)
+          </button>
+          <button type="button" class="tool-btn" id="btnViewMeridian" title="มองตั้งฉากเมริเดียน">
+            <span>🧭</span> ระนาบเมริเดียน
+          </button>
+          <button type="button" class="tool-btn" id="btnViewZenith" title="มองจากจุดจอมฟ้า">
+            <span>👁️</span> จุดจอมฟ้า (Zenith)
+          </button>
+        </div>
+
+        <div class="legend" id="stageLegend">
+          <span class="item"><span class="dot" style="background:#52b788"></span>ขอบฟ้า (Horizon h=0°)</span>
+          <span class="item"><span class="dot" style="background:#8ecae6"></span>เส้นรอบวงเมริเดียน (Meridian)</span>
+          <span class="item"><span class="dot" style="background:#ff8c42"></span>ทางเดินประจำวัน (Diurnal Path)</span>
+          <span class="item"><span class="dot" style="background:#48cae4"></span>เส้นมุมชั่วโมง (Hour Angle H)</span>
+          <span class="item"><span class="dot" style="background:#e76f51"></span>สนธยาแพ่ง (−6°)</span>
+          <span class="item"><span class="dot" style="background:#457b9d"></span>เดินเรือ (−12°)</span>
+          <span class="item"><span class="dot" style="background:#1d3557"></span>ดาราศาสตร์ (−18°)</span>
+          <span class="item"><span class="dot" style="background:#ffd166"></span>จุดขึ้น/ตก (Rise/Set)</span>
+        </div>
       </div>
     </section>
 

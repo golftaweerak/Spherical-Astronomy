@@ -47,33 +47,52 @@ applyCamera();
 const allLabels = [];
 let labelsVisible = true;
 
-function makeLabel(text, color = '#e9ecf5', bg = 'rgba(12,16,32,0.85)', scale = 6.8) {
+function getLabelScaleMultiplier() {
+  const w = window.innerWidth;
+  if (w <= 480) return 1.45;
+  if (w <= 768) return 1.28;
+  return 1.0;
+}
+
+function makeLabel(text, color = '#e9ecf5', bg = 'rgba(8,12,28,0.92)', scale = 6.8) {
   const c = document.createElement('canvas');
   const ctx = c.getContext('2d');
-  const fs = 42;
+  const fs = 56;
   ctx.font = `600 ${fs}px "IBM Plex Sans Thai", sans-serif`;
-  const pad = 20;
-  c.width = Math.max(32, Math.ceil(ctx.measureText(text).width + pad * 2));
+  const pad = 26;
+  c.width = Math.max(40, Math.ceil(ctx.measureText(text).width + pad * 2));
   c.height = fs + pad;
 
   const ctx2 = c.getContext('2d');
   ctx2.font = `600 ${fs}px "IBM Plex Sans Thai", sans-serif`;
-  const r = 12;
   ctx2.fillStyle = bg;
   ctx2.beginPath();
-  if (ctx2.roundRect) ctx2.roundRect(0, 0, c.width, c.height, r);
+  if (ctx2.roundRect) ctx2.roundRect(0, 0, c.width, c.height, 16);
   else ctx2.rect(0, 0, c.width, c.height);
   ctx2.fill();
+
+  ctx2.lineWidth = 3;
+  ctx2.strokeStyle = 'rgba(255, 255, 255, 0.24)';
+  ctx2.stroke();
+
   ctx2.fillStyle = color;
   ctx2.textBaseline = 'middle';
-  ctx2.fillText(text, pad, c.height / 2);
+  ctx2.shadowColor = 'rgba(0, 0, 0, 0.9)';
+  ctx2.shadowBlur = 6;
+  ctx2.fillText(text, pad, c.height / 2 + 1);
+  ctx2.shadowBlur = 0;
 
   const texture = new THREE.CanvasTexture(c);
   texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
   const mat = new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true });
   const sprite = new THREE.Sprite(mat);
-  sprite.scale.set(scale * (c.width / c.height), scale, 1);
-  sprite.userData = { canvas: c, scale, baseColor: color, baseBg: bg };
+
+  const mult = getLabelScaleMultiplier();
+  const aspect = c.width / c.height;
+  sprite.scale.set(aspect * scale * mult, scale * mult, 1);
+  sprite.userData = { canvas: c, scale, aspect, baseColor: color, baseBg: bg, fs, pad };
   allLabels.push(sprite);
   return sprite;
 }
@@ -81,28 +100,41 @@ function makeLabel(text, color = '#e9ecf5', bg = 'rgba(12,16,32,0.85)', scale = 
 function updateLabel(sprite, text, color, bg) {
   const d = sprite.userData;
   const c = d.canvas;
-  const fs = 42;
-  const pad = 20;
+  const fs = d.fs || 56;
+  const pad = d.pad || 26;
   const ctx = c.getContext('2d');
   ctx.font = `600 ${fs}px "IBM Plex Sans Thai", sans-serif`;
-  c.width = Math.max(32, Math.ceil(ctx.measureText(text).width + pad * 2));
+  c.width = Math.max(40, Math.ceil(ctx.measureText(text).width + pad * 2));
   c.height = fs + pad;
 
   const ctx2 = c.getContext('2d');
   ctx2.font = `600 ${fs}px "IBM Plex Sans Thai", sans-serif`;
   ctx2.fillStyle = bg || d.baseBg;
   ctx2.beginPath();
-  if (ctx2.roundRect) ctx2.roundRect(0, 0, c.width, c.height, 12);
+  if (ctx2.roundRect) ctx2.roundRect(0, 0, c.width, c.height, 16);
   else ctx2.rect(0, 0, c.width, c.height);
   ctx2.fill();
+
+  ctx2.lineWidth = 3;
+  ctx2.strokeStyle = 'rgba(255, 255, 255, 0.24)';
+  ctx2.stroke();
+
   ctx2.fillStyle = color || d.baseColor;
   ctx2.textBaseline = 'middle';
-  ctx2.fillText(text, pad, c.height / 2);
+  ctx2.shadowColor = 'rgba(0, 0, 0, 0.9)';
+  ctx2.shadowBlur = 6;
+  ctx2.fillText(text, pad, c.height / 2 + 1);
+  ctx2.shadowBlur = 0;
 
   sprite.material.map.dispose();
-  sprite.material.map = new THREE.CanvasTexture(c);
-  sprite.material.map.minFilter = THREE.LinearFilter;
-  sprite.scale.set(d.scale * (c.width / c.height), d.scale, 1);
+  const texture = new THREE.CanvasTexture(c);
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
+  sprite.material.map = texture;
+  d.aspect = c.width / c.height;
+  const mult = getLabelScaleMultiplier();
+  sprite.scale.set(d.aspect * d.scale * mult, d.scale * mult, 1);
 }
 
 // -------------------------------------------------------------
@@ -593,20 +625,77 @@ if (togglePzxLabelsBtn) {
   });
 }
 
+function doResetCameraView() {
+  camState.theta = DEFAULT_CAM.theta;
+  camState.phi = DEFAULT_CAM.phi;
+  camState.radius = DEFAULT_CAM.radius;
+  applyCamera();
+}
+
 if (btnPzxResetView) {
-  btnPzxResetView.addEventListener('click', () => {
-    camState.theta = DEFAULT_CAM.theta;
-    camState.phi = DEFAULT_CAM.phi;
-    camState.radius = DEFAULT_CAM.radius;
-    applyCamera();
+  btnPzxResetView.addEventListener('click', doResetCameraView);
+}
+const btnPzxResetViewDesktop = $('btnPzxResetViewDesktop');
+if (btnPzxResetViewDesktop) {
+  btnPzxResetViewDesktop.addEventListener('click', doResetCameraView);
+}
+
+/* ---- ควบคุม Dropdown / Popover บนหน้าจอมือถือ (แสดง/ซ่อนองค์ประกอบ และ สัญลักษณ์สี) ---- */
+const btnToggleLayersMenu = $('btnToggleLayersMenu');
+const btnToggleLegendMenu = $('btnToggleLegendMenu');
+const stageToolbarLayers = $('stageToolbarLayers');
+const stageLegend = $('stageLegend');
+
+function closeAllPopovers() {
+  if (stageToolbarLayers) stageToolbarLayers.classList.remove('open-popover');
+  if (stageLegend) stageLegend.classList.remove('open-popover');
+  if (btnToggleLayersMenu) {
+    btnToggleLayersMenu.classList.remove('active');
+    btnToggleLayersMenu.setAttribute('aria-expanded', 'false');
+  }
+  if (btnToggleLegendMenu) {
+    btnToggleLegendMenu.classList.remove('active');
+    btnToggleLegendMenu.setAttribute('aria-expanded', 'false');
+  }
+}
+
+if (btnToggleLayersMenu && stageToolbarLayers) {
+  btnToggleLayersMenu.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = stageToolbarLayers.classList.contains('open-popover');
+    closeAllPopovers();
+    if (!isOpen) {
+      stageToolbarLayers.classList.add('open-popover');
+      btnToggleLayersMenu.classList.add('active');
+      btnToggleLayersMenu.setAttribute('aria-expanded', 'true');
+    }
   });
 }
+
+if (btnToggleLegendMenu && stageLegend) {
+  btnToggleLegendMenu.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = stageLegend.classList.contains('open-popover');
+    closeAllPopovers();
+    if (!isOpen) {
+      stageLegend.classList.add('open-popover');
+      btnToggleLegendMenu.classList.add('active');
+      btnToggleLegendMenu.setAttribute('aria-expanded', 'true');
+    }
+  });
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#stageToolbarLayers') && !e.target.closest('#stageLegend') &&
+      !e.target.closest('.mobile-control-bar')) {
+    closeAllPopovers();
+  }
+});
 
 // ควบคุมเมนูลิ้นชักด้านข้าง (YouTube-Style Side Drawer)
 const menuToggle = $('menuToggle');
 const drawerClose = $('drawerClose');
 const drawerBackdrop = $('drawerBackdrop');
-const btnBrowseAllSims = $('btnBrowseAllSims');
 
 function openDrawer() { document.body.classList.add('drawer-open'); }
 function closeDrawer() { document.body.classList.remove('drawer-open'); }
@@ -614,7 +703,6 @@ function closeDrawer() { document.body.classList.remove('drawer-open'); }
 if (menuToggle) menuToggle.addEventListener('click', openDrawer);
 if (drawerClose) drawerClose.addEventListener('click', closeDrawer);
 if (drawerBackdrop) drawerBackdrop.addEventListener('click', closeDrawer);
-if (btnBrowseAllSims) btnBrowseAllSims.addEventListener('click', openDrawer);
 
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && document.body.classList.contains('drawer-open')) {
@@ -672,6 +760,13 @@ function fitCameraToViewport() {
   camState.minRadius = R * 1.50 / Math.tan(minFov / 2);
   if (camState.radius < camState.minRadius) camState.radius = camState.minRadius;
   applyCamera();
+
+  const mult = getLabelScaleMultiplier();
+  allLabels.forEach(lbl => {
+    if (lbl.userData?.aspect && lbl.userData?.scale) {
+      lbl.scale.set(lbl.userData.aspect * lbl.userData.scale * mult, lbl.userData.scale * mult, 1);
+    }
+  });
 }
 const ro = new ResizeObserver(() => {
   const w = stage.clientWidth, h = stage.clientHeight;

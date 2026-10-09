@@ -35,14 +35,19 @@ const dom = {
   resDriftTime: document.getElementById("resDriftTime"),
 
   btnResetView: document.getElementById("btnResetView"),
+  btnResetViewDesktop: document.getElementById("btnResetViewDesktop"),
   btnViewEarthFollow: document.getElementById("btnViewEarthFollow"),
   btnViewPerspective: document.getElementById("btnViewPerspective"),
+
+  btnToggleLayersMenu: document.getElementById("btnToggleLayersMenu"),
+  btnToggleLegendMenu: document.getElementById("btnToggleLegendMenu"),
+  stageToolbarLayers: document.getElementById("stageToolbarLayers"),
+  stageLegend: document.getElementById("stageLegend"),
 
   menuToggle: document.getElementById("menuToggle"),
   sideDrawer: document.getElementById("sideDrawer"),
   drawerBackdrop: document.getElementById("drawerBackdrop"),
-  drawerClose: document.getElementById("drawerClose"),
-  btnBrowseAllSims: document.getElementById("btnBrowseAllSims")
+  drawerClose: document.getElementById("drawerClose")
 };
 
 // ---------------- สถานะแบบจำลอง ----------------
@@ -343,14 +348,17 @@ dom.btnPlayTime.addEventListener("click", () => {
 });
 
 // มุมกล้อง
-dom.btnResetView.addEventListener("click", () => {
+function doResetCamera() {
   state.followEarth = false;
   camState.radius = 360;
   camState.theta = 0;
   camState.phi = 15 * D2R;
   camState.target.set(0, 0, 0);
   updateCameraPosition();
-});
+}
+
+dom.btnResetView?.addEventListener("click", doResetCamera);
+dom.btnResetViewDesktop?.addEventListener("click", doResetCamera);
 
 dom.btnViewEarthFollow.addEventListener("click", () => {
   state.followEarth = true;
@@ -369,6 +377,53 @@ dom.btnViewPerspective.addEventListener("click", () => {
   updateCameraPosition();
 });
 
+/* ---- ควบคุม Dropdown / Popover บนหน้าจอมือถือ ---- */
+function closeAllPopovers() {
+  dom.stageToolbarLayers?.classList.remove("open-popover");
+  dom.stageLegend?.classList.remove("open-popover");
+  if (dom.btnToggleLayersMenu) {
+    dom.btnToggleLayersMenu.classList.remove("active");
+    dom.btnToggleLayersMenu.setAttribute("aria-expanded", "false");
+  }
+  if (dom.btnToggleLegendMenu) {
+    dom.btnToggleLegendMenu.classList.remove("active");
+    dom.btnToggleLegendMenu.setAttribute("aria-expanded", "false");
+  }
+}
+
+if (dom.btnToggleLayersMenu && dom.stageToolbarLayers) {
+  dom.btnToggleLayersMenu.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isOpen = dom.stageToolbarLayers.classList.contains("open-popover");
+    closeAllPopovers();
+    if (!isOpen) {
+      dom.stageToolbarLayers.classList.add("open-popover");
+      dom.btnToggleLayersMenu.classList.add("active");
+      dom.btnToggleLayersMenu.setAttribute("aria-expanded", "true");
+    }
+  });
+}
+
+if (dom.btnToggleLegendMenu && dom.stageLegend) {
+  dom.btnToggleLegendMenu.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isOpen = dom.stageLegend.classList.contains("open-popover");
+    closeAllPopovers();
+    if (!isOpen) {
+      dom.stageLegend.classList.add("open-popover");
+      dom.btnToggleLegendMenu.classList.add("active");
+      dom.btnToggleLegendMenu.setAttribute("aria-expanded", "true");
+    }
+  });
+}
+
+document.addEventListener("click", (e) => {
+  if (!e.target.closest("#stageToolbarLayers") && !e.target.closest("#stageLegend") &&
+      !e.target.closest(".mobile-control-bar")) {
+    closeAllPopovers();
+  }
+});
+
 // Drawer Navigation
 function openDrawer() {
   document.body.classList.add("drawer-open");
@@ -384,7 +439,6 @@ function closeDrawer() {
 dom.menuToggle?.addEventListener("click", openDrawer);
 dom.drawerClose?.addEventListener("click", closeDrawer);
 dom.drawerBackdrop?.addEventListener("click", closeDrawer);
-dom.btnBrowseAllSims?.addEventListener("click", openDrawer);
 
 window.addEventListener("keydown", (e) => {
   if (e.key === "Escape") closeDrawer();

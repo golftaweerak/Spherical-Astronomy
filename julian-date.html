@@ -150,28 +150,6 @@
     </button>
   </header>
 
-  <!-- แถบนำทางด่วน -->
-  <nav class="module-nav" aria-label="แถบเลือกบทเรียนจำลอง">
-    <a class="nav-tab" href="./index.html">
-      <span>🌐</span> ทรงกลมท้องฟ้า
-    </a>
-    <a class="nav-tab" href="./seasons-ecliptic.html">
-      <span>☀️</span> สุริยวิถี 4 ฤดูกาล
-    </a>
-    <a class="nav-tab" href="./sidereal-solar.html">
-      <span>⏱️</span> วันดาราคติ vs สุริยคติ
-    </a>
-    <a class="nav-tab" href="./equation-of-time.html">
-      <span>⏳</span> สมการเวลา & Analemma
-    </a>
-    <button type="button" class="nav-tab active" style="border:none; cursor:default;">
-      <span>📅</span> วันจูเลียน & เวลาสากล
-    </button>
-    <button type="button" class="nav-tab btn-open-menu-chip" id="btnBrowseAllSims" style="border:none; cursor:pointer;">
-      <span>📚</span> สารบัญบทเรียน ▾
-    </button>
-  </nav>
-
   <div class="layout">
 
     <!-- ============ ฝั่งซ้าย: แผงควบคุมและอินพุต ============ -->
@@ -331,22 +309,36 @@
     <!-- ============ ฝั่งขวา: นาฬิกาดาราศาสตร์ 4 ระบบ (Astronomical Time Wheel) ============ -->
     <section class="sky-card" aria-label="นาฬิกาดาราศาสตร์ 4 ระบบ">
       <div class="stage" id="stage" style="display:flex; flex-direction:column; align-items:center; justify-content:center;">
-        
         <!-- หน้าปัดนาฬิกาดาราศาสตร์แบบ Canvas 2D หลายวงแหวน -->
         <div style="width:100%; height:100%; position:relative; display:flex; align-items:center; justify-content:center;">
-          <canvas id="clockCanvas" style="max-width:560px; max-height:560px; width:90%; height:90%;"></canvas>
+          <canvas id="clockCanvas" style="max-width:540px; max-height:540px; width:90%; height:90%;"></canvas>
+        </div>
+      </div>
+
+      <div class="sky-controls-wrap">
+        <!-- แถบปุ่มลัดบนมือถือ (แสดงเฉพาะหน้าจอ <= 768px) -->
+        <div class="mobile-control-bar">
+          <button type="button" class="mobile-dropdown-btn" id="btnToggleLayersMenu" aria-expanded="false" title="เลือกก้าวเวลา">
+            <span>⏱️</span> ก้าวเวลา ▾
+          </button>
+          <button type="button" class="mobile-dropdown-btn" id="btnToggleLegendMenu" aria-expanded="false" title="ดูความหมายระบบเวลา">
+            <span>ℹ️</span> ระบบเวลา ▾
+          </button>
+          <button type="button" class="tool-btn mobile-quick-btn primary" id="btnToggleLiveClock" title="เดินเวลาสด">
+            <span id="liveIcon">⏱️</span> เดินเวลาสด
+          </button>
         </div>
 
         <!-- แถบเครื่องมือควบคุมด้านล่าง -->
-        <div class="stage-toolbar" style="bottom: 48px;">
+        <div class="stage-toolbar" id="stageToolbarLayers">
           <button type="button" class="tool-btn" id="btnStepMinusDay" title="ถอยหลัง 1 วัน">
             <span>◀</span> −1 วัน
           </button>
           <button type="button" class="tool-btn" id="btnStepMinusHour" title="ถอยหลัง 1 ชั่วโมง">
             <span>◀</span> −1 ชม.
           </button>
-          <button type="button" class="tool-btn primary" id="btnToggleLiveClock" title="เดินเวลาสด">
-            <span id="liveIcon">⏱️</span> เดินเวลาสด (Live)
+          <button type="button" class="tool-btn primary" id="btnToggleLiveClockDesktop" title="เดินเวลาสด">
+            <span id="liveIconDesktop">⏱️</span> เดินเวลาสด (Live)
           </button>
           <button type="button" class="tool-btn" id="btnStepPlusHour" title="เดินหน้า 1 ชั่วโมง">
             +1 ชม. <span>▶</span>
@@ -357,7 +349,7 @@
         </div>
 
         <!-- กล่องคำอธิบายสัญลักษณ์ด้านล่าง -->
-        <div class="legend">
+        <div class="legend" id="stageLegend">
           <div class="legend-item"><span class="legend-dot" style="background:#f6c445;"></span> เวลาไทย (UTC+7)</div>
           <div class="legend-item"><span class="legend-dot" style="background:#4fa3e3;"></span> เวลาสากล (UT)</div>
           <div class="legend-item"><span class="legend-dot" style="background:#7dd6a8;"></span> เวลาไซดีเรียลกรีนิช (GMST)</div>

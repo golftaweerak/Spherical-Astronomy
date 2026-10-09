@@ -160,7 +160,7 @@ for (const pair of simPairs) {
 // ---------------------------------------------------------------------
 // TEST SUITE 3: ตรวจสอบโจทย์แก่นในเอกสาร 2. spherical_astronomy_and_time_corrected.tex
 // ---------------------------------------------------------------------
-console.log('\n[3/4] ตรวจสอบความสอดคล้องกับโจทย์แก่นในเอกสารคำสอน สอวน.:');
+console.log('\n[3/5] ตรวจสอบความสอดคล้องกับโจทย์แก่นในเอกสารคำสอน สอวน.:');
 
 // ตรวจสอบโจทย์หน้า 734: phi=18.5, dec=20.0, ha=45.0 -> h ~ 47.6 deg, A ~ 279.7 deg
 const phiRad = 18.5 * D2R, decRad = 20.0 * D2R, haRad = 45.0 * D2R;
@@ -181,12 +181,50 @@ assert(Math.abs(rsSunEq.setAzDeg - 270) < 1e-4, `โจทย์แก่น 2: 
 // ---------------------------------------------------------------------
 // TEST SUITE 4: ตรวจสอบการซิงค์ main.js กับ app.js
 // ---------------------------------------------------------------------
-console.log('\n[4/4] ตรวจสอบความสอดคล้องของ bundle และ main.js:');
+console.log('\n[4/5] ตรวจสอบความสอดคล้องของ bundle และ main.js:');
 const mainPath = path.join(__dirname, 'main.js');
 const appPath = path.join(__dirname, 'app.js');
 const mainBytes = fs.readFileSync(mainPath);
 const appBytes = fs.readFileSync(appPath);
 assert(mainBytes.equals(appBytes), 'main.js ซิงค์กับ app.js สมบูรณ์ (100% Identical byte-for-byte)');
+
+// ---------------------------------------------------------------------
+// TEST SUITE 5: ตรวจสอบความถูกต้องของลิงก์ HTML, CSS, Drawer & Responsive UI
+// ---------------------------------------------------------------------
+console.log('\n[5/5] ตรวจสอบโครงสร้าง Responsive UI, สไตล์ชีท และลิงก์ทุกลิงก์:');
+const htmlFiles = fs.readdirSync(__dirname).filter(f => f.endsWith('.html'));
+for (const file of htmlFiles) {
+  const content = fs.readFileSync(path.join(__dirname, file), 'utf8');
+  assert(content.includes('<!DOCTYPE html>'), `${file} มี DOCTYPE ถูกต้อง`);
+  assert(content.includes('</html>'), `${file} มีแท็กปิด </html> ครบถ้วน`);
+  assert(content.includes('style.css'), `${file} เชื่อมโยง style.css`);
+
+  const hrefRegex = /href=["']([^"'#:]+\.html)["']/g;
+  let match;
+  let brokenHrefs = [];
+  while ((match = hrefRegex.exec(content)) !== null) {
+    const target = match[1];
+    if (!fs.existsSync(path.join(__dirname, target))) {
+      brokenHrefs.push(target);
+    }
+  }
+  assert(brokenHrefs.length === 0, `${file} ลิงก์ภายในทุกอันถูกต้อง (${brokenHrefs.length === 0 ? 'ครบถ้วน' : brokenHrefs.join(', ')})`);
+}
+
+for (const pair of simPairs) {
+  const content = fs.readFileSync(path.join(__dirname, pair.html), 'utf8');
+  assert(content.includes('side-drawer') || content.includes('drawerBackdrop'), `${pair.html} มีระบบ Side Drawer สำหรับมือถือ`);
+  assert(content.includes('menuToggle'), `${pair.html} มีปุ่มเมนู menuToggle`);
+  assert(!content.includes('class="module-nav"'), `${pair.html} กำจัดแถบสารบัญด่วนซ้ำซ้อน .module-nav แล้ว`);
+}
+
+const cssContent = fs.readFileSync(path.join(__dirname, 'style.css'), 'utf8');
+const openBraces = (cssContent.match(/{/g) || []).length;
+const closeBraces = (cssContent.match(/}/g) || []).length;
+assert(openBraces === closeBraces, `style.css ปีกกาเปิด-ปิดสมดุลกัน (${openBraces} / ${closeBraces})`);
+assert(cssContent.includes('.mobile-control-bar'), `style.css มีคลาส .mobile-control-bar`);
+assert(cssContent.includes('.side-drawer'), `style.css มีคลาส .side-drawer`);
+assert(cssContent.includes('@media (max-width: 768px)'), `style.css มี Media Query สำหรับหน้าจอโทรศัพท์`);
 
 console.log('\n===============================================================');
 console.log(` สรุปผลการตรวจสอบ: ${passedTests} ผ่าน / ${failedTests} ล้มเหลว (ทั้งหมด ${totalTests} ข้อ)`);
