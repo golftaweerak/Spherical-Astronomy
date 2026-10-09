@@ -1174,6 +1174,57 @@ if (btnResetView) {
   });
 }
 
+/* ---- ควบคุม Dropdown / Popover บนหน้าจอมือถือ (แสดง/ซ่อนองค์ประกอบ และ สัญลักษณ์สี) ---- */
+const btnToggleLayersMenu = $('btnToggleLayersMenu');
+const btnToggleLegendMenu = $('btnToggleLegendMenu');
+const stageToolbarLayers = $('stageToolbarLayers');
+const stageLegend = $('stageLegend');
+
+function closeMobilePopovers() {
+  if (stageToolbarLayers) stageToolbarLayers.classList.remove('open-popover');
+  if (stageLegend) stageLegend.classList.remove('open-popover');
+  if (btnToggleLayersMenu) {
+    btnToggleLayersMenu.classList.remove('active');
+    btnToggleLayersMenu.setAttribute('aria-expanded', 'false');
+  }
+  if (btnToggleLegendMenu) {
+    btnToggleLegendMenu.classList.remove('active');
+    btnToggleLegendMenu.setAttribute('aria-expanded', 'false');
+  }
+}
+
+if (btnToggleLayersMenu && stageToolbarLayers) {
+  btnToggleLayersMenu.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = stageToolbarLayers.classList.contains('open-popover');
+    closeMobilePopovers();
+    if (!isOpen) {
+      stageToolbarLayers.classList.add('open-popover');
+      btnToggleLayersMenu.classList.add('active');
+      btnToggleLayersMenu.setAttribute('aria-expanded', 'true');
+    }
+  });
+}
+
+if (btnToggleLegendMenu && stageLegend) {
+  btnToggleLegendMenu.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = stageLegend.classList.contains('open-popover');
+    closeMobilePopovers();
+    if (!isOpen) {
+      stageLegend.classList.add('open-popover');
+      btnToggleLegendMenu.classList.add('active');
+      btnToggleLegendMenu.setAttribute('aria-expanded', 'true');
+    }
+  });
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.sky-controls-wrap')) {
+    closeMobilePopovers();
+  }
+});
+
 /* ---- ควบคุมเมนูลิ้นชักด้านข้าง (YouTube-Style Side Drawer) ---- */
 const menuToggle = $('menuToggle');
 const drawerClose = $('drawerClose');

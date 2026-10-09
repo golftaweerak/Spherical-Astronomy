@@ -361,45 +361,58 @@
     <section class="sky-card" aria-label="ทรงกลมท้องฟ้าสามมิติ">
       <div class="stage" id="stage"></div>
 
-      <!-- แถบปุ่มควบคุมการแสดงผลและเส้นช่วยอ่านพิกัด -->
-      <div class="stage-toolbar">
-        <button type="button" class="tool-btn active-green" id="toggleAltAz" aria-pressed="true">
-          <span>📐</span> พิกัดขอบฟ้า (Alt/Az)
-        </button>
-        <button type="button" class="tool-btn active-blue" id="toggleRaDec" aria-pressed="true">
-          <span>🌐</span> พิกัดศูนย์สูตร (RA/Dec)
-        </button>
-        <button type="button" class="tool-btn active-amber" id="toggleDiurnalPath" aria-pressed="true">
-          <span>💫</span> เส้นทางดาว (Diurnal)
-        </button>
-        <button type="button" class="tool-btn active-amber" id="toggleEcliptic" aria-pressed="true">
-          <span>☀️</span> สุริยวิถี (Ecliptic)
-        </button>
-        <button type="button" class="tool-btn active" id="toggleGround" aria-pressed="true">
-          <span>🌍</span> ระนาบขอบฟ้า
-        </button>
-        <button type="button" class="tool-btn active" id="toggleLabels" aria-pressed="true">
-          <span>🏷️</span> ป้ายกำกับ
-        </button>
-        <button type="button" class="tool-btn active" id="toggleGrid" aria-pressed="true">
-          <span>🧭</span> กริดพิกัด
-        </button>
-        <button type="button" class="tool-btn" id="toolBtnPlay" title="เดินเวลาจำลอง">
-          <span>▶</span> เริ่ม
-        </button>
-        <button type="button" class="tool-btn" id="btnResetView" title="รีเซ็ตมุมมอง">
-          <span>🔄</span> รีเซ็ตมุมมอง
-        </button>
-      </div>
+      <!-- แถบควบคุมมุมมอง 3D (รองรับทั้ง Desktop Bar และ Mobile Dropdown) -->
+      <div class="sky-controls-wrap">
+        <!-- แถบปุ่มลัดบนมือถือ (แสดงเฉพาะหน้าจอ <= 768px) -->
+        <div class="mobile-control-bar">
+          <button type="button" class="mobile-dropdown-btn" id="btnToggleLayersMenu" aria-expanded="false" title="เลือกองค์ประกอบที่จะแสดง">
+            <span>⚙️</span> แสดง/ซ่อน ▾
+          </button>
+          <button type="button" class="mobile-dropdown-btn" id="btnToggleLegendMenu" aria-expanded="false" title="ดูความหมายของสัญลักษณ์สี">
+            <span>ℹ️</span> สัญลักษณ์สี ▾
+          </button>
+          <button type="button" class="tool-btn mobile-quick-btn" id="toolBtnPlay" title="เดินเวลาจำลอง">
+            <span>▶</span> เริ่ม
+          </button>
+          <button type="button" class="tool-btn mobile-quick-btn" id="btnResetView" title="รีเซ็ตมุมมอง">
+            <span>🔄</span> รีเซ็ต
+          </button>
+        </div>
 
-      <div class="hint">ลากเพื่อหมุน · ซูมด้วยสองนิ้วหรือล้อเมาส์</div>
-      <div class="legend">
-        <span class="item"><span class="dot" style="background:#f2c14e"></span>ดาวเป้าหมาย</span>
-        <span class="item"><span class="dot" style="background:#f59e0b"></span>เส้นทางดาวประจำวัน (Diurnal Path)</span>
-        <span class="item"><span class="dot" style="background:#6ea8e8"></span>ศูนย์สูตรฟ้า / เดคลิเนชัน</span>
-        <span class="item"><span class="dot" style="background:#fbbf24"></span>เส้นสุริยวิถี (Ecliptic)</span>
-        <span class="item"><span class="dot" style="background:#7dd6a8"></span>ระนาบขอบฟ้า / มุมเงย / จุดจอมฟ้า</span>
-        <span class="item"><span class="dot" style="background:#b8a0e8"></span>จุดวสันตวิษุวัต (♈)</span>
+        <!-- แผงปุ่มเปิด/ปิดเส้นและระนาบ (Desktop: เรียงแนวนอน / Mobile: Popover Dropdown) -->
+        <div class="stage-toolbar" id="stageToolbarLayers">
+          <button type="button" class="tool-btn active-green" id="toggleAltAz" aria-pressed="true">
+            <span>📐</span> พิกัดขอบฟ้า (Alt/Az)
+          </button>
+          <button type="button" class="tool-btn active-blue" id="toggleRaDec" aria-pressed="true">
+            <span>🌐</span> พิกัดศูนย์สูตร (RA/Dec)
+          </button>
+          <button type="button" class="tool-btn active-amber" id="toggleDiurnalPath" aria-pressed="true">
+            <span>💫</span> เส้นทางดาว (Diurnal)
+          </button>
+          <button type="button" class="tool-btn" id="toggleEcliptic" aria-pressed="false">
+            <span>☀️</span> สุริยวิถี (Ecliptic)
+          </button>
+          <button type="button" class="tool-btn active" id="toggleGround" aria-pressed="true">
+            <span>🌍</span> ระนาบขอบฟ้า
+          </button>
+          <button type="button" class="tool-btn active" id="toggleLabels" aria-pressed="true">
+            <span>🏷️</span> ป้ายกำกับ
+          </button>
+          <button type="button" class="tool-btn active" id="toggleGrid" aria-pressed="true">
+            <span>🧭</span> กริดพิกัด
+          </button>
+        </div>
+
+        <!-- กล่องคำอธิบายสัญลักษณ์สี (Desktop: แถบแนวนอน / Mobile: Popover Dropdown) -->
+        <div class="legend" id="stageLegend">
+          <span class="item"><span class="dot" style="background:#f2c14e"></span>ดาวเป้าหมาย</span>
+          <span class="item"><span class="dot" style="background:#f59e0b"></span>เส้นทางดาวประจำวัน (Diurnal Path)</span>
+          <span class="item"><span class="dot" style="background:#6ea8e8"></span>ศูนย์สูตรฟ้า / เดคลิเนชัน</span>
+          <span class="item"><span class="dot" style="background:#fbbf24"></span>เส้นสุริยวิถี (Ecliptic)</span>
+          <span class="item"><span class="dot" style="background:#7dd6a8"></span>ระนาบขอบฟ้า / มุมเงย / จุดจอมฟ้า</span>
+          <span class="item"><span class="dot" style="background:#b8a0e8"></span>จุดวสันตวิษุวัต (♈)</span>
+        </div>
       </div>
     </section>
 
