@@ -91,9 +91,23 @@ button { cursor: pointer; background: none; border: none; }
 .app { max-width: 1400px; margin: 0 auto; padding: 16px; }
 
 header.app-header {
-  display: flex; align-items: center; gap: 14px;
-  padding: 8px 4px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 16px;
+  margin: -16px -16px 16px -16px;
+  background: rgba(11, 16, 32, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--color-border);
 }
+[data-theme='light'] header.app-header {
+  background: rgba(238, 241, 248, 0.92);
+}
+
 .menu-toggle {
   width: 40px; height: 40px; border-radius: 10px;
   display: grid; place-items: center;
@@ -129,7 +143,8 @@ header.app-header {
 @media (max-width: 640px) {
   .app { padding: 8px 10px 24px; }
   header.app-header {
-    padding: 4px 2px 10px;
+    margin: -8px -10px 14px -10px;
+    padding: 8px 10px;
     gap: 10px;
   }
   .menu-toggle {
@@ -440,14 +455,14 @@ body.drawer-open .side-drawer,
 .sky-card {
   grid-area: sky;
   position: sticky;
-  top: 16px;
+  top: 76px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
   backdrop-filter: blur(12px);
   overflow: hidden;
-  height: calc(100vh - 110px);
-  min-height: 620px;
+  height: calc(100vh - 96px);
+  min-height: 580px;
   display: flex;
   flex-direction: column;
 }

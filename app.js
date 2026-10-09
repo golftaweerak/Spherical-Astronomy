@@ -1229,8 +1229,6 @@ document.addEventListener('click', (e) => {
 const menuToggle = $('menuToggle');
 const drawerClose = $('drawerClose');
 const drawerBackdrop = $('drawerBackdrop');
-const btnBrowseAllSims = $('btnBrowseAllSims');
-const btnQuickOverview = $('btnQuickOverview');
 
 function openDrawer() {
   document.body.classList.add('drawer-open');
@@ -1242,8 +1240,6 @@ function closeDrawer() {
 if (menuToggle) menuToggle.addEventListener('click', openDrawer);
 if (drawerClose) drawerClose.addEventListener('click', closeDrawer);
 if (drawerBackdrop) drawerBackdrop.addEventListener('click', closeDrawer);
-if (btnBrowseAllSims) btnBrowseAllSims.addEventListener('click', openDrawer);
-if (btnQuickOverview) btnQuickOverview.addEventListener('click', closeDrawer);
 
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && document.body.classList.contains('drawer-open')) {
