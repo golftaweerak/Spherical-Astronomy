@@ -919,7 +919,7 @@ function recompute() {
   const gmst = gmstHours(jd);
   const lst = lstHours(jd, lon);
 
-  let ra, dec, res, haSigned;
+  let ra, dec, res, haHours;
 
   if (currentInputMode === 'horizontal') {
     // โหมดระบุพิกัดขอบฟ้า (Alt/Az) → แปลงกลับเป็นพิกัดศูนย์สูตรฟ้า (RA/Dec)
@@ -935,7 +935,7 @@ function recompute() {
     const N = Math.cos(altRad) * Math.cos(azRad);
     const U = Math.sin(altRad);
     res = { altDeg: alt, azDeg: az, E, N, U };
-    haSigned = inv.haHours > 12 ? inv.haHours - 24 : inv.haHours;
+    haHours = ((inv.haHours % 24) + 24) % 24;
 
     // ซิงค์ค่าไปยังช่อง RA/Dec เผื่อผู้ใช้สลับโหมดกลับ
     raInput.value = ra.toFixed(4);
@@ -945,8 +945,7 @@ function recompute() {
     ra = ((parseFloat(raInput.value) || 0) % 24 + 24) % 24;
     dec = Math.max(-90, Math.min(90, parseFloat(decInput.value) || 0));
     res = equatorialToHorizontal(ra, dec, lat, lst);
-    const ha = ((lst - ra) % 24 + 24) % 24;
-    haSigned = ha > 12 ? ha - 24 : ha;
+    haHours = ((lst - ra) % 24 + 24) % 24;
 
     // ซิงค์ค่าไปยังช่อง Alt/Az เผื่อผู้ใช้สลับโหมด
     altInput.value = res.altDeg.toFixed(2);
@@ -965,12 +964,16 @@ function recompute() {
   targetGlow.material.color.setHex(col);
   targetGlow.material.opacity = above ? 0.22 : 0.12;
 
-  // อัปเดตแสดงผลตัวเลข
+  // อัปเดตแสดงผลตัวเลข (มุมชั่วโมงแสดงเป็นค่าบวก 0–24 ชั่วโมงเสมอ)
+  const haDeg = (haHours * 15) % 360;
   $('lstOut').textContent = hoursToHMS(lst);
   $('gmstOut').textContent = `GMST ${hoursToHMS(gmst)}`;
-  $('haOut').textContent = `${haSigned.toFixed(3)} ชม. (${(haSigned * 15).toFixed(1)}°)`;
+  $('haOut').textContent = `${haHours.toFixed(3)} ชม. (${haDeg.toFixed(1)}°)`;
   if (haSubOut) {
-    haSubOut.textContent = haSigned < 0 ? 'ลบ = ซีกฟ้าตะวันออก (ยังไม่ถึงเมริเดียน)' : 'บวก = ซีกฟ้าตะวันตก (เลยเมริเดียนแล้ว)';
+    const sideText = haHours === 0
+      ? 'ตรงเมริเดียนบนพอดี'
+      : (haHours < 12 ? 'ซีกฟ้าตะวันตก (หลังผ่านเมริเดียน)' : 'ซีกฟ้าตะวันออก (ก่อนถึงเมริเดียน)');
+    haSubOut.textContent = `${hoursToHMS(haHours)} · ${sideText}`;
   }
 
   $('altOut').textContent = `${res.altDeg.toFixed(3)}°`;
