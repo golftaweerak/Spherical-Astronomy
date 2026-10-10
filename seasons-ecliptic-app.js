@@ -159,12 +159,16 @@ rootGroup.add(horizonGroup);
 const celestialGroup = new THREE.Group();
 horizonGroup.add(celestialGroup);
 
-// วัตถุระนาบสุริยวิถี (Ecliptic frame)
+// กลุ่มท้องฟ้าที่หมุนรอบแกนขั้วฟ้าตามเวลาประจำวัน (Diurnal Rotating Sky Group)
+const rotatingSkyGroup = new THREE.Group();
+celestialGroup.add(rotatingSkyGroup);
+
+// วัตถุระนาบสุริยวิถี (Ecliptic frame: เอียง ε = 23.44° เทียบกับศูนย์สูตรฟ้า)
 const eclipticGroup = new THREE.Group();
-celestialGroup.add(eclipticGroup);
+rotatingSkyGroup.add(eclipticGroup);
 
 // ---------------- สร้างทรงกลมท้องฟ้าและระนาบ ----------------
-// 1. ทรงกลมโปร่งใสรอบนอก
+// 1. ทรงกลมโปร่งใสรอบนอก (หมุนไปพร้อมกับกลุ่มดาวและสุริยวิถี)
 const sphereGeo = new THREE.SphereGeometry(R, 64, 32);
 const sphereMat = new THREE.MeshBasicMaterial({
   color: 0x224488,
@@ -173,7 +177,7 @@ const sphereMat = new THREE.MeshBasicMaterial({
   opacity: 0.12
 });
 const celestialSphereMesh = new THREE.Mesh(sphereGeo, sphereMat);
-celestialGroup.add(celestialSphereMesh);
+rotatingSkyGroup.add(celestialSphereMesh);
 
 // 2. ระนาบขอบฟ้า (Horizon Disc)
 const horizonDiscGeo = new THREE.CircleGeometry(R, 64);
@@ -309,7 +313,8 @@ const sunGlowMat = new THREE.MeshBasicMaterial({
 const sunGlowMesh = new THREE.Mesh(sunGlowGeo, sunGlowMat);
 sunGroup.add(sunGlowMesh);
 
-celestialGroup.add(sunGroup);
+// ดวงอาทิตย์อยู่บนระนาบสุริยวิถีเสมอ (Ecliptic)
+eclipticGroup.add(sunGroup);
 
 const allSprites = [];
 
@@ -512,8 +517,11 @@ function updateSimulation() {
   const sunRADeg = eq.raDeg;
   const sunRAH = eq.raHours;
 
+  // วางดวงอาทิตย์บนเส้นสุริยวิถีตามลองจิจูด λ (ใน eclipticGroup)
+  sunGroup.position.set(R * Math.cos(lamRad), 0, -R * Math.sin(lamRad));
+
   // 3. วาดวงกลมทางเดินประจำวัน (Diurnal Path)
-  // เป็นวงกลมขนานศูนย์สูตรฟ้า ที่มีเดคลิเนชัน δ คงที่
+  // เป็นวงกลมขนานศูนย์สูตรฟ้า ที่มีเดคลิเนชัน δ คงที่ ใน celestialGroup
   const rParallel = R * Math.cos(sunDecDeg * D2R);
   const yParallel = R * Math.sin(sunDecDeg * D2R);
 
@@ -522,20 +530,23 @@ function updateSimulation() {
     const ang = (i / 96) * Math.PI * 2;
     diurnalPts.push(new THREE.Vector3(Math.cos(ang) * rParallel, yParallel, Math.sin(ang) * rParallel));
   }
-  diurnalLine.geometry.setFromPoints(diurnalPts);
+  diurnalLine.geometry.dispose();
+  diurnalLine.geometry = new THREE.BufferGeometry().setFromPoints(diurnalPts);
 
-  // 4. คำนวณตำแหน่ง 3D ของดวงอาทิตย์ในรอบวันตามมุมชั่วโมง H
-  // เวลาสุริยคติเที่ยงวัน (12.0) = จุดผ่านเมริเดียนบน (H = 0°)
-  // H = (solarTimeH - 12) * 15°
+  // 4. หมุนกลุ่มท้องฟ้าประจำวัน (Diurnal Rotation) รอบแกนขั้วฟ้า NCP (แกน Y)
+  // ให้ดวงอาทิตย์ (ซึ่งอยู่บนสุริยวิถี) มีมุมชั่วโมง H ตรงกับเวลาสุริยคติ solarTimeH
+  // เวลาสุริยคติเที่ยงวัน (12.0 น.) = จุดผ่านเมริเดียนบน (H = 0°)
   const hourAngleDeg = (state.solarTimeH - 12) * 15;
   const hourAngleRad = hourAngleDeg * D2R;
 
-  // ตำแหน่งในกรอบศูนย์สูตรฟ้า:
-  // ที่ H = 0 (ผ่านเมริเดียนบน) ดวงอาทิตย์อยู่บนระนาบ YZ
-  const sunX = -rParallel * Math.sin(hourAngleRad);
-  const sunY = yParallel;
-  const sunZ = rParallel * Math.cos(hourAngleRad);
-  sunGroup.position.set(sunX, sunY, sunZ);
+  // พิกัดของดวงอาทิตย์ใน rotatingSkyGroup ก่อนหมุนรอบแกน Y:
+  // x1 = R * cos(λ), z1 = -R * cos(ε) * sin(λ)
+  const x1 = R * Math.cos(lamRad);
+  const z1 = -R * Math.cos(epsRad) * Math.sin(lamRad);
+  const phi1 = Math.atan2(x1, z1);
+  const thetaY = -hourAngleRad - phi1;
+
+  rotatingSkyGroup.rotation.y = thetaY;
 
   // 5. คำนวณเงื่อนไขขึ้น-ตก และความยาวนานกลางวัน
   const riseSet = calculateRiseSet(sunDecDeg, state.latDeg);
@@ -715,18 +726,28 @@ dom.btnResetView?.addEventListener("click", doResetCamera);
 dom.btnResetViewDesktop?.addEventListener("click", doResetCamera);
 
 dom.btnViewEcliptic?.addEventListener("click", () => {
-  // มองจากขั้วสุริยวิถีเหนือ (NEP)
+  // มองจากขั้วสุริยวิถีเหนือ (NEP) แบบไดนามิกตามการหมุนของระนาบสุริยวิถีปัจจุบัน
+  eclipticGroup.updateMatrixWorld(true);
+  const nepWorld = new THREE.Vector3(0, 1, 0)
+    .applyQuaternion(eclipticGroup.getWorldQuaternion(new THREE.Quaternion()))
+    .normalize();
+  camState.phi = Math.acos(Math.max(-1, Math.min(1, nepWorld.y)));
+  camState.theta = Math.atan2(nepWorld.x, nepWorld.z);
   camState.radius = 270;
-  camState.theta = 0;
-  camState.phi = (90 - EPSILON_DEG) * D2R;
+  camState.target.set(0, 0, 0);
   updateCameraPosition();
 });
 
 dom.btnViewNCP?.addEventListener("click", () => {
-  // มองจากขั้วฟ้าเหนือ (NCP)
+  // มองจากขั้วฟ้าเหนือ (NCP) ตามละติจูด
+  celestialGroup.updateMatrixWorld(true);
+  const ncpWorld = new THREE.Vector3(0, 1, 0)
+    .applyQuaternion(celestialGroup.getWorldQuaternion(new THREE.Quaternion()))
+    .normalize();
+  camState.phi = Math.acos(Math.max(-1, Math.min(1, ncpWorld.y)));
+  camState.theta = Math.atan2(ncpWorld.x, ncpWorld.z);
   camState.radius = 270;
-  camState.theta = 0;
-  camState.phi = (90 - state.latDeg) * D2R;
+  camState.target.set(0, 0, 0);
   updateCameraPosition();
 });
 
@@ -735,6 +756,7 @@ dom.btnViewZenith?.addEventListener("click", () => {
   camState.radius = 270;
   camState.theta = 0;
   camState.phi = 0.05;
+  camState.target.set(0, 0, 0);
   updateCameraPosition();
 });
 
