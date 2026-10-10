@@ -78,6 +78,7 @@ const dom = {
   chkEquator: document.getElementById("chkEquator"),
   chkHorizon: document.getElementById("chkHorizon"),
   chkDiurnal: document.getElementById("chkDiurnal"),
+  chkHourAngle: document.getElementById("chkHourAngle"),
   chkZodiac: document.getElementById("chkZodiac"),
   chkGrid: document.getElementById("chkGrid"),
 
@@ -85,6 +86,8 @@ const dom = {
   seasonName: document.getElementById("seasonName"),
   seasonDesc: document.getElementById("seasonDesc"),
 
+  resSolarLon: document.getElementById("resSolarLon"),
+  resSunHA: document.getElementById("resSunHA"),
   resSunDec: document.getElementById("resSunDec"),
   resSunRA: document.getElementById("resSunRA"),
   resNoonAlt: document.getElementById("resNoonAlt"),
@@ -114,7 +117,8 @@ const state = {
   solarLonDeg: 0,
   dayOfYear: 80,
   latDeg: 13.8,
-  solarTimeH: 12.0, // เที่ยงวัน = 12 ชม.
+  haHours: 0.0, // มุมชั่วโมงบวก (0.0 ถึง 24.0 ชม., 0 = เมริเดียนบน)
+  solarTimeH: 12.0, // เวลาสุริยคติ = H + 12 (12 = เที่ยงวัน)
   isDailyPlaying: false,
   isYearlyPlaying: false
 };
@@ -295,6 +299,21 @@ const diurnalLineMat = new THREE.LineBasicMaterial({ color: 0xff8c42, linewidth:
 const diurnalLine = new THREE.Line(diurnalLineGeo, diurnalLineMat);
 celestialGroup.add(diurnalLine);
 
+// 5.1 เส้นและส่วนโค้งวัดมุมชั่วโมงของดวงอาทิตย์ (Hour Circle & Equatorial Hour Angle Arc แบบใน rise-set-condition.html)
+const hourCircleGeo = new THREE.BufferGeometry();
+const hourCircleLine = new THREE.Line(
+  hourCircleGeo,
+  new THREE.LineDashedMaterial({ color: 0x48cae4, dashSize: 3, gapSize: 2, linewidth: 2 })
+);
+celestialGroup.add(hourCircleLine);
+
+const hourArcGeo = new THREE.BufferGeometry();
+const hourArcLine = new THREE.Line(
+  hourArcGeo,
+  new THREE.LineBasicMaterial({ color: 0x48cae4, linewidth: 3.5 })
+);
+celestialGroup.add(hourArcLine);
+
 // 6. แบบจำลองดวงอาทิตย์ (The Sun Mesh)
 const sunGroup = new THREE.Group();
 const sunCoreGeo = new THREE.SphereGeometry(4.2, 32, 32);
@@ -325,35 +344,44 @@ function getSpriteScaleMultiplier() {
   return 1.0;
 }
 
-// ป้ายข้อความ 3D แบบ Sprite (High-DPI Supersampling)
+// ป้ายข้อความ 3D แบบ Sprite (Fixed Canvas High-DPI Supersampling เพื่อให้ texture.needsUpdate อัปเดต 100%)
 function createTextSprite(text, color = "#ffffff", fontSize = 28) {
   const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 128;
   const ctx = canvas.getContext("2d");
-  const fs = Math.round(fontSize * 1.7);
-  ctx.font = `600 ${fs}px 'IBM Plex Sans Thai', sans-serif`;
+  const fs = Math.round(fontSize * 1.6);
   const pad = 24;
-  canvas.width = Math.max(60, Math.ceil(ctx.measureText(text).width + pad * 2));
-  canvas.height = fs + pad;
 
-  const ctx2 = canvas.getContext("2d");
-  ctx2.font = `600 ${fs}px 'IBM Plex Sans Thai', sans-serif`;
-  ctx2.fillStyle = "rgba(8, 12, 28, 0.88)";
-  ctx2.beginPath();
-  if (ctx2.roundRect) ctx2.roundRect(0, 0, canvas.width, canvas.height, 14);
-  else ctx2.rect(0, 0, canvas.width, canvas.height);
-  ctx2.fill();
+  function draw(str) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.font = `600 ${fs}px 'IBM Plex Sans Thai', sans-serif`;
+    const textWidth = ctx.measureText(str).width;
+    const boxW = Math.min(canvas.width - 12, Math.max(80, Math.ceil(textWidth + pad * 2)));
+    const boxH = Math.min(canvas.height - 12, fs + pad);
+    const boxX = (canvas.width - boxW) / 2;
+    const boxY = (canvas.height - boxH) / 2;
 
-  ctx2.lineWidth = 2.5;
-  ctx2.strokeStyle = "rgba(255, 255, 255, 0.22)";
-  ctx2.stroke();
+    ctx.fillStyle = "rgba(8, 12, 28, 0.90)";
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(boxX, boxY, boxW, boxH, 14);
+    else ctx.rect(boxX, boxY, boxW, boxH);
+    ctx.fill();
 
-  ctx2.fillStyle = color;
-  ctx2.textAlign = "center";
-  ctx2.textBaseline = "middle";
-  ctx2.shadowColor = "rgba(0, 0, 0, 0.9)";
-  ctx2.shadowBlur = 6;
-  ctx2.fillText(text, canvas.width / 2, canvas.height / 2 + 1);
-  ctx2.shadowBlur = 0;
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+    ctx.stroke();
+
+    ctx.fillStyle = color;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.shadowColor = "rgba(0, 0, 0, 0.9)";
+    ctx.shadowBlur = 6;
+    ctx.fillText(str, canvas.width / 2, canvas.height / 2 + 1);
+    ctx.shadowBlur = 0;
+  }
+
+  draw(text);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.minFilter = THREE.LinearFilter;
@@ -365,7 +393,16 @@ function createTextSprite(text, color = "#ffffff", fontSize = 28) {
   const baseH = (fontSize / 28) * 8.2;
   const mult = getSpriteScaleMultiplier();
   sprite.scale.set(baseH * aspect * mult, baseH * mult, 1);
+  sprite.lastText = text;
   sprite.userData = { baseH, aspect };
+
+  sprite.setText = function(newText) {
+    if (sprite.lastText === newText) return;
+    sprite.lastText = newText;
+    draw(newText);
+    texture.needsUpdate = true;
+  };
+
   allSprites.push(sprite);
   return sprite;
 }
@@ -382,47 +419,51 @@ const meridianCircle = new THREE.LineLoop(
 );
 horizonGroup.add(meridianCircle);
 
-// ป้ายทิศหลักขอบฟ้า
+// ป้ายทิศหลักขอบฟ้า (วางไว้ใต้ขอบฟ้า Y = -8 เพื่อไม่ให้ซ้อนทับกับจุดวสันตวิษุวัต/ศารทวิษุวัต และศูนย์สูตรฟ้า)
 const lblN = createTextSprite("N (เหนือ)", "#52b788");
-lblN.position.set(0, 0, -R * 1.08);
+lblN.position.set(0, -8, -R * 1.14);
 horizonGroup.add(lblN);
 
 const lblS = createTextSprite("S (ใต้)", "#52b788");
-lblS.position.set(0, 0, R * 1.08);
+lblS.position.set(0, -8, R * 1.14);
 horizonGroup.add(lblS);
 
 const lblE = createTextSprite("E (ออก)", "#52b788");
-lblE.position.set(R * 1.08, 0, 0);
+lblE.position.set(R * 1.14, -8, 0);
 horizonGroup.add(lblE);
 
 const lblW = createTextSprite("W (ตก)", "#52b788");
-lblW.position.set(-R * 1.08, 0, 0);
+lblW.position.set(-R * 1.14, -8, 0);
 horizonGroup.add(lblW);
 
 const lblZ = createTextSprite("Z (จอมฟ้า)", "#ffd166");
-lblZ.position.set(0, R * 1.08, 0);
+lblZ.position.set(0, R * 1.18, 0);
 horizonGroup.add(lblZ);
 
 const lblNadir = createTextSprite("Na (จุดดิ่ง)", "#94a3b8", 22);
-lblNadir.position.set(0, -R * 1.08, 0);
+lblNadir.position.set(0, -R * 1.18, 0);
 horizonGroup.add(lblNadir);
 
-// ป้าย 4 จุดสำคัญ
+// ป้าย 4 จุดสำคัญ (ยกสูงขึ้น Y = +10 บนระนาบสุริยวิถี และเยื้องมุมเล็กน้อย ไม่ให้ทับแนวทิศหลัก E/W และป้ายมุมชั่วโมง)
 const lblVernal = createTextSprite("วสันตวิษุวัต (♈)", "#7dd6a8", 22);
-lblVernal.position.set(R * 1.15, 0, 0);
+lblVernal.position.set(R * 1.15 * Math.cos(7 * D2R), 10, -R * 1.15 * Math.sin(7 * D2R));
 eclipticGroup.add(lblVernal);
 
 const lblSummer = createTextSprite("ครีษมายัน (♋)", "#ff758f", 22);
-lblSummer.position.set(0, 0, -R * 1.15);
+lblSummer.position.set(-R * 1.15 * Math.sin(7 * D2R), 10, -R * 1.15 * Math.cos(7 * D2R));
 eclipticGroup.add(lblSummer);
 
 const lblAutumn = createTextSprite("ศารทวิษุวัต (♎)", "#90e0ef", 22);
-lblAutumn.position.set(-R * 1.15, 0, 0);
+lblAutumn.position.set(-R * 1.15 * Math.cos(7 * D2R), 10, R * 1.15 * Math.sin(7 * D2R));
 eclipticGroup.add(lblAutumn);
 
 const lblWinter = createTextSprite("เหมายัน (♑)", "#48cae4", 22);
-lblWinter.position.set(0, 0, R * 1.15);
+lblWinter.position.set(R * 1.15 * Math.sin(7 * D2R), 10, R * 1.15 * Math.cos(7 * D2R));
 eclipticGroup.add(lblWinter);
+
+// ป้ายกำกับมุมชั่วโมง H ติดตามส่วนโค้งศูนย์สูตรฟ้า
+const lblHourAngle = createTextSprite("H = 0.00 ชม. (0.0°)", "#48cae4", 22);
+celestialGroup.add(lblHourAngle);
 
 // ---------------- กล้องและการควบคุมมุมมอง ----------------
 const camState = {
@@ -534,19 +575,55 @@ function updateSimulation() {
   diurnalLine.geometry = new THREE.BufferGeometry().setFromPoints(diurnalPts);
 
   // 4. หมุนกลุ่มท้องฟ้าประจำวัน (Diurnal Rotation) รอบแกนขั้วฟ้า NCP (แกน Y)
-  // ให้ดวงอาทิตย์ (ซึ่งอยู่บนสุริยวิถี) มีมุมชั่วโมง H ตรงกับเวลาสุริยคติ solarTimeH
-  // เวลาสุริยคติเที่ยงวัน (12.0 น.) = จุดผ่านเมริเดียนบน (H = 0°)
-  const hourAngleDeg = (state.solarTimeH - 12) * 15;
-  const hourAngleRad = hourAngleDeg * D2R;
+  // ให้ดวงอาทิตย์มีมุมชั่วโมง H ตรงกับ state.haHours (0 ถึง 24 ชั่วโมง)
+  state.haHours = ((state.haHours % 24) + 24) % 24;
+  state.solarTimeH = ((state.haHours + 12) % 24);
+  const haHours = state.haHours;
+  const haDeg = (haHours * 15) % 360;
+  const haRad = haDeg * D2R;
 
   // พิกัดของดวงอาทิตย์ใน rotatingSkyGroup ก่อนหมุนรอบแกน Y:
   // x1 = R * cos(λ), z1 = -R * cos(ε) * sin(λ)
   const x1 = R * Math.cos(lamRad);
   const z1 = -R * Math.cos(epsRad) * Math.sin(lamRad);
   const phi1 = Math.atan2(x1, z1);
-  const thetaY = -hourAngleRad - phi1;
+  const thetaY = -haRad - phi1;
 
   rotatingSkyGroup.rotation.y = thetaY;
+
+  // คำนวณและวาดเส้นมุมชั่วโมง (Hour Angle Arc & Hour Circle) แบบใน rise-set-condition.html
+  const haSteps = 48;
+  const haArcPts = [];
+  const haStep = haRad / haSteps;
+  for (let i = 0; i <= haSteps; i++) {
+    const a = haStep * i;
+    haArcPts.push(new THREE.Vector3(-R * Math.sin(a), 0, R * Math.cos(a)));
+  }
+  hourArcLine.geometry.dispose();
+  hourArcLine.geometry = new THREE.BufferGeometry().setFromPoints(haArcPts);
+
+  // วงกลมชั่วโมงผ่านดวงอาทิตย์ จาก NCP ไปยัง SCP ผ่านมุมชั่วโมง H เดียวกัน
+  const hcPts = [];
+  for (let i = 0; i <= 64; i++) {
+    const ang = -Math.PI / 2 + (i / 64) * Math.PI;
+    hcPts.push(new THREE.Vector3(
+      -R * Math.cos(ang) * Math.sin(haRad),
+      R * Math.sin(ang),
+      R * Math.cos(ang) * Math.cos(haRad)
+    ));
+  }
+  hourCircleLine.geometry.dispose();
+  hourCircleLine.geometry = new THREE.BufferGeometry().setFromPoints(hcPts);
+  hourCircleLine.computeLineDistances();
+
+  // ป้ายข้อความระบุมุมชั่วโมง H วางข้างดวงอาทิตย์ตามแนวรัศมีภายนอก
+  const sunX = -rParallel * Math.sin(haRad);
+  const sunY = yParallel;
+  const sunZ = rParallel * Math.cos(haRad);
+  const sunDist = Math.hypot(sunX, sunY, sunZ) || R;
+  const radialMult = (R + 13) / sunDist;
+  lblHourAngle.position.set(sunX * radialMult, sunY * radialMult + 4.5, sunZ * radialMult);
+  lblHourAngle.setText(`H = ${haHours.toFixed(2)} ชม. (${haDeg.toFixed(1)}°)`);
 
   // 5. คำนวณเงื่อนไขขึ้น-ตก และความยาวนานกลางวัน
   const riseSet = calculateRiseSet(sunDecDeg, state.latDeg);
@@ -562,10 +639,16 @@ function updateSimulation() {
   dom.valDateStr.textContent = dayOfYearToDateStr(state.dayOfYear);
   dom.valObsLat.textContent = `${Math.abs(state.latDeg).toFixed(1)}° ${state.latDeg >= 0 ? "N" : "S"}`;
   
+  const haDesc = haHours === 0 || haHours === 24
+    ? "เมริเดียนบน (จุดสูงสุด)"
+    : (haHours < 12 ? "เลยเมริเดียนบนไปทางตะวันตก" : "ยังไม่ถึงเมริเดียนบน (ซีกฟ้าตะวันออก)");
   const hNum = Math.floor(state.solarTimeH);
   const mNum = Math.floor((state.solarTimeH - hNum) * 60);
-  dom.valSolarTime.textContent = `${String(hNum).padStart(2, "0")}:${String(mNum).padStart(2, "0")} น.`;
+  const timeStr = `${String(hNum).padStart(2, "0")}:${String(mNum).padStart(2, "0")} น.`;
+  dom.valSolarTime.textContent = `${haHours.toFixed(2)} ชม. (${haDeg.toFixed(1)}° — ${haDesc} / ${timeStr})`;
 
+  if (dom.resSolarLon) dom.resSolarLon.textContent = `${state.solarLonDeg.toFixed(1)}°`;
+  if (dom.resSunHA) dom.resSunHA.textContent = `${haHours.toFixed(2)} ชม. (${haDeg.toFixed(1)}°)`;
   dom.resSunDec.textContent = `${sunDecDeg >= 0 ? "+" : ""}${sunDecDeg.toFixed(2)}° (${degToDMS(sunDecDeg)})`;
   dom.resSunRA.textContent = `${sunRAH.toFixed(2)} ชม. (${hoursToHMS(sunRAH)})`;
   dom.resNoonAlt.textContent = `${noonAlt.toFixed(2)}°`;
@@ -593,6 +676,10 @@ function updateSimulation() {
   equatorLine.visible = dom.chkEquator.checked;
   horizonGroup.visible = dom.chkHorizon.checked;
   diurnalLine.visible = dom.chkDiurnal.checked;
+  const showHA = dom.chkHourAngle ? dom.chkHourAngle.checked : true;
+  hourCircleLine.visible = showHA;
+  hourArcLine.visible = showHA;
+  lblHourAngle.visible = showHA;
   celestialSphereMesh.visible = dom.chkGrid.checked;
 
   lblVernal.visible = dom.chkZodiac.checked;
@@ -648,9 +735,25 @@ dom.obsLat.addEventListener("input", (e) => {
   updateSimulation();
 });
 
-dom.solarTime.addEventListener("input", (e) => {
-  state.solarTimeH = parseFloat(e.target.value);
+function setHourAngle(newHA) {
+  state.haHours = ((newHA % 24) + 24) % 24;
+  state.solarTimeH = ((state.haHours + 12) % 24);
+  dom.solarTime.value = state.haHours;
   updateSimulation();
+}
+
+dom.solarTime.addEventListener("input", (e) => {
+  setHourAngle(parseFloat(e.target.value));
+});
+dom.solarTime.addEventListener("change", (e) => {
+  setHourAngle(parseFloat(e.target.value));
+});
+
+// ชิปมุมชั่วโมง
+document.querySelectorAll("[data-ha]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    setHourAngle(parseFloat(btn.dataset.ha));
+  });
 });
 
 // ชิปตำแหน่งสำคัญ 4 ฤดูกาล
@@ -696,8 +799,8 @@ document.querySelectorAll("[data-lat]").forEach((btn) => {
 });
 
 // เช็คบ็อกซ์แสดงผล
-[dom.chkEcliptic, dom.chkEquator, dom.chkHorizon, dom.chkDiurnal, dom.chkZodiac, dom.chkGrid].forEach((chk) => {
-  chk.addEventListener("change", updateSimulation);
+[dom.chkEcliptic, dom.chkEquator, dom.chkHorizon, dom.chkDiurnal, dom.chkHourAngle, dom.chkZodiac, dom.chkGrid].forEach((chk) => {
+  chk?.addEventListener("change", updateSimulation);
 });
 
 // แอนิเมชันเดินเวลาประจำวัน
@@ -851,10 +954,11 @@ function animate(currentTime) {
   const dt = (currentTime - lastTime) / 1000;
   lastTime = currentTime;
 
-  // แอนิเมชันเดินเวลาประจำวัน (1 วินาที = 1 ชั่วโมง)
+  // แอนิเมชันเดินเวลาประจำวัน (1 วินาที = 1.5 ชั่วโมง)
   if (state.isDailyPlaying) {
-    state.solarTimeH = (state.solarTimeH + dt * 1.5) % 24;
-    dom.solarTime.value = state.solarTimeH;
+    state.haHours = (state.haHours + dt * 1.5) % 24;
+    state.solarTimeH = (state.haHours + 12) % 24;
+    dom.solarTime.value = state.haHours;
     updateSimulation();
   }
 

@@ -207,10 +207,16 @@
 
         <div class="field">
           <div class="label-with-val">
-            <label for="solarTime">เวลาสุริยคติประจำวัน (Local Solar Time: ชม.)</label>
-            <span class="val-badge" id="valSolarTime">12:00 น. (เที่ยงวัน)</span>
+            <label for="solarTime">มุมชั่วโมงปัจจุบัน H (0 ถึง 24 ชั่วโมง) / เวลาสุริยคติ</label>
+            <span class="val-badge" id="valSolarTime">0.00 ชม. (0.0° — เมริเดียนบน / 12:00 น.)</span>
           </div>
-          <input type="range" id="solarTime" min="0" max="24" step="0.1" value="12">
+          <input type="range" id="solarTime" min="0" max="24" step="0.1" value="0">
+          <div class="chip-row" style="margin-top:6px;">
+            <button type="button" class="chip" data-ha="0">เมริเดียนบน (H=0h · 12:00 น.)</button>
+            <button type="button" class="chip" data-ha="6">ทิศตะวันตก (H=6h · 18:00 น.)</button>
+            <button type="button" class="chip" data-ha="12">เมริเดียนล่าง (H=12h · 00:00 น.)</button>
+            <button type="button" class="chip" data-ha="18">ทิศตะวันออก (H=18h · 06:00 น.)</button>
+          </div>
         </div>
 
         <div class="field" style="display:flex; gap:8px; margin-top:8px;">
@@ -231,6 +237,7 @@
           <label class="toggle"><input type="checkbox" id="chkEquator" checked>ศูนย์สูตรฟ้า (Equator)</label>
           <label class="toggle"><input type="checkbox" id="chkHorizon" checked>ระนาบขอบฟ้า (Horizon)</label>
           <label class="toggle"><input type="checkbox" id="chkDiurnal" checked>ทางเดินประจำวัน (Diurnal)</label>
+          <label class="toggle"><input type="checkbox" id="chkHourAngle" checked>เส้นมุมชั่วโมง (Hour Angle H)</label>
           <label class="toggle"><input type="checkbox" id="chkZodiac" checked>กลุ่มดาวจักราศี (Zodiac)</label>
           <label class="toggle"><input type="checkbox" id="chkGrid" checked>ตารางพิกัดทรงกลม</label>
         </div>
@@ -246,6 +253,14 @@
         </div>
 
         <div class="result-grid">
+          <div class="result-item">
+            <span class="k">ลองจิจูดสุริยวิถี λ<sub>☉</sub></span>
+            <span class="v" id="resSolarLon">0.0°</span>
+          </div>
+          <div class="result-item">
+            <span class="k">มุมชั่วโมง H<sub>☉</sub> (0–24 ชม.)</span>
+            <span class="v highlight" id="resSunHA">0.00 ชม. (0.0°)</span>
+          </div>
           <div class="result-item">
             <span class="k">เดคลิเนชัน δ<sub>☉</sub></span>
             <span class="v" id="resSunDec">0.00°</span>
@@ -324,6 +339,7 @@
           <span class="item"><span class="dot" style="background:#52b788"></span>ระนาบขอบฟ้า (Horizon h=0°)</span>
           <span class="item"><span class="dot" style="background:#8ecae6"></span>เส้นรอบวงเมริเดียน (Meridian)</span>
           <span class="item"><span class="dot" style="background:#ff8c42"></span>ทางเดินประจำวัน (Diurnal Path)</span>
+          <span class="item"><span class="dot" style="background:#48cae4"></span>เส้นและส่วนโค้งมุมชั่วโมง (Hour Angle H)</span>
           <span class="item"><span class="dot" style="background:#ffd166"></span>ดวงอาทิตย์ (Sun)</span>
         </div>
       </div>
